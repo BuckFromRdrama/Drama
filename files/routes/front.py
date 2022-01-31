@@ -90,42 +90,50 @@ def notifications(v):
 		
 	if not posts:
 		listing = []
+		all = set()
 		for c in comments:
 			c.is_blocked = False
 			c.is_blocking = False
 			if c.parent_submission and c.parent_comment and c.parent_comment.author_id == v.id:
 				replies = []
 				for x in c.replies:
-					if x.author_id == v.id:
+					if x.id not in all and x.author_id == v.id:
 						x.voted = 1
 						replies.append(x)
+						all.add(x.id)
 				c.replies = replies
-				while c.parent_comment and c.parent_comment.author_id == v.id:
+				while c.parent_comment and (c.parent_comment.author_id == v.id or c.parent_comment in comments):
 					parent = c.parent_comment
 					if c not in parent.replies2:
 						parent.replies2 = parent.replies2 + [c]
 						parent.replies = parent.replies2
 					c = parent
-				if c not in listing:
+				if c.id not in all and c not in listing:
+					all.add(c.id)
 					listing.append(c)
 					c.replies = c.replies2
 			elif c.parent_submission:
 				replies = []
 				for x in c.replies:
-					if x.author_id == v.id:
+					if x.id not in all and x.author_id == v.id:
 						x.voted = 1
 						replies.append(x)
+						all.add(x.id)
 				c.replies = replies
-				if c not in listing:
+				if x.id not in all and c not in listing:
+					all.add(c.id)
 					listing.append(c)
 			else:
 				if c.parent_comment:
 					while c.level > 1:
+						all.add(c.id)
 						c = c.parent_comment
 
-				if c not in listing:
+				if c.id not in all and c not in listing:
+					all.add(c.id)
 					listing.append(c)
 
+	listing = listing
 	if request.headers.get("Authorization"): return {"data":[x.json for x in listing]}
 
 	return render_template("notifications.html",
