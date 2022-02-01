@@ -638,8 +638,12 @@ def settings_images_profile(v):
 
 	if not imageurl: abort(400)
 
-	if v.highres and '/images/' in v.highres : os.remove('/images/' + v.highres.split('/images/')[1])
-	if v.profileurl and '/images/' in v.profileurl : os.remove('/images/' + v.profileurl.split('/images/')[1])
+	if v.highres and '/images/' in v.highres:
+		fpath = '/images/' + v.highres.split('/images/')[1]
+		if path.isfile(fpath): os.remove(fpath)
+	if v.profileurl and '/images/' in v.profileurl:
+		fpath = '/images/' + v.profileurl.split('/images/')[1]
+		if path.isfile(fpath): os.remove(fpath)
 	v.highres = highres
 	v.profileurl = imageurl
 	g.db.add(v)
@@ -666,7 +670,9 @@ def settings_images_banner(v):
 	bannerurl = process_image(name)
 
 	if bannerurl:
-		if v.bannerurl and '/images/' in v.bannerurl : os.remove('/images/' + v.bannerurl.split('/images/')[1])
+		if v.bannerurl and '/images/' in v.bannerurl:
+			fpath = '/images/' + v.bannerurl.split('/images/')[1]
+			if path.isfile(fpath): os.remove(fpath)
 		v.bannerurl = bannerurl
 		g.db.add(v)
 		g.db.commit()
@@ -745,7 +751,7 @@ def settings_profilecss(v):
 	return render_template("settings_profilecss.html", v=v)
 
 @app.post("/settings/block")
-@limiter.limit("1/second;30/minute;200/hour;1000/day")
+@limiter.limit("1/second;10/day")
 @auth_required
 def settings_block_user(v):
 

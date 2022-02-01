@@ -76,6 +76,7 @@ def shop(v):
 		if v.has_badge(badge): discount -= discounts[badge]
 
 	for val in AWARDS.values():
+		val["baseprice"] = int(val["price"])
 		val["price"] = int(val["price"]*discount)
 
 	sales = g.db.query(func.sum(User.coins_spent)).scalar()
@@ -403,6 +404,13 @@ def award_post(pid, v):
 		for c in post.comments:
 			c.ghost = True
 			g.db.add(c)
+	elif kind == "nword":
+		author.nwordpass = True
+		if not author.has_badge(108):
+			new_badge = Badge(badge_id=108, user_id=author.id)
+			g.db.add(new_badge)
+			g.db.flush()
+			send_notification(author.id, f"@AutoJanny has given you the following profile badge:\n\n![]({new_badge.path})\n\n{new_badge.name}")
 	elif kind == "rehab":
 		if author.rehab: author.rehab += 86400
 		else: author.rehab = int(time.time()) + 86400
@@ -630,6 +638,13 @@ def award_comment(cid, v):
 	elif kind == "ghosts":
 		c.ghost = True
 		g.db.add(c)
+	elif kind == "nword":
+		author.nwordpass = True
+		if not author.has_badge(108):
+			new_badge = Badge(badge_id=108, user_id=author.id)
+			g.db.add(new_badge)
+			g.db.flush()
+			send_notification(author.id, f"@AutoJanny has given you the following profile badge:\n\n![]({new_badge.path})\n\n{new_badge.name}")
 	elif kind == "rehab":
 		if author.rehab: author.rehab += 86400
 		else: author.rehab = int(time.time()) + 86400

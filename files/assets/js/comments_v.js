@@ -1,6 +1,6 @@
 function post(url) {
 	const xhr = new XMLHttpRequest();
-	xhr.open("POST", url, true);
+	xhr.open("POST", url);
 	xhr.setRequestHeader('xhr', 'xhr');
 	var form = new FormData()
 	form.append("formkey", formkey());
@@ -9,7 +9,7 @@ function post(url) {
 
 function post_toast3(url, button1, button2) {
 	const xhr = new XMLHttpRequest();
-	xhr.open("POST", url, true);
+	xhr.open("POST", url);
 	xhr.setRequestHeader('xhr', 'xhr');
 	var form = new FormData()
 	form.append("formkey", formkey());
@@ -48,25 +48,34 @@ function report_commentModal(id, author) {
 
 	document.getElementById("comment-author").textContent = author;
 
-	document.getElementById("reportCommentButton").onclick = function() {
+	document.getElementById("reportCommentFormBefore").classList.remove('d-none');
+	document.getElementById("reportCommentFormAfter").classList.add('d-none');
 
-	this.innerHTML='Reporting comment';
-	this.disabled = true;
-	const xhr = new XMLHttpRequest();
-	xhr.open("POST", '/report/comment/'+id, true);
-	xhr.setRequestHeader('xhr', 'xhr');
-	var form = new FormData()
-	form.append("formkey", formkey());
-	form.append("reason", document.getElementById("reason-comment").value);
+	btn = document.getElementById("reportCommentButton")
+	btn.innerHTML='Report comment';
+	btn.disabled = false;
 
-	xhr.onload=function() {
-		document.getElementById("reportCommentFormBefore").classList.add('d-none');
-		document.getElementById("reportCommentFormAfter").classList.remove('d-none');
-	};
+	reason = document.getElementById("reason-comment")
+	reason.value = ""
+	
+	btn.onclick = function() {
+		this.innerHTML='Reporting comment';
+		this.disabled = true;
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", '/report/comment/'+id);
+		xhr.setRequestHeader('xhr', 'xhr');
+		var form = new FormData()
+		form.append("formkey", formkey());
+		form.append("reason", reason.value);
 
-	xhr.onerror=function(){alert(errortext)};
-	xhr.send(form);
-}
+		xhr.onload=function() {
+			document.getElementById("reportCommentFormBefore").classList.add('d-none');
+			document.getElementById("reportCommentFormAfter").classList.remove('d-none');
+		};
+
+		xhr.onerror=function(){alert(errortext)};
+		xhr.send(form);
+	}
 
 };
 
@@ -106,7 +115,7 @@ function delete_commentModal(id) {
 
 		var url = '/delete/comment/' + id
 		const xhr = new XMLHttpRequest();
-		xhr.open("POST", url, true);
+		xhr.open("POST", url);
 		xhr.setRequestHeader('xhr', 'xhr');
 		var form = new FormData()
 		form.append("formkey", formkey());

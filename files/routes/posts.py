@@ -203,6 +203,7 @@ def post_id(pid, anything=None, v=None):
 		comments = first + second
 
 	offset = 0
+	ids = set()
 
 	if post.comment_count > 60 and not request.headers.get("Authorization") and not request.values.get("all"):
 		comments2 = []
@@ -210,17 +211,18 @@ def post_id(pid, anything=None, v=None):
 		if post.created_utc > 1638672040:
 			for comment in comments:
 				comments2.append(comment)
+				ids.add(comment.id)
 				count += g.db.query(Comment.id).filter_by(parent_submission=post.id, top_comment_id=comment.id).count() + 1
-				offset += 1
 				if count > 50: break
 		else:
 			for comment in comments:
 				comments2.append(comment)
+				ids.add(comment.id)
 				count += g.db.query(Comment.id).filter_by(parent_submission=post.id, parent_comment_id=comment.id).count() + 1
-				offset += 1
 				if count > 10: break
 
-		if len(comments) == len(comments2): offset = None
+		if len(comments) == len(comments2): offset = 0
+		else: offset = 1
 		comments = comments2
 
 	for pin in pinned:
@@ -243,13 +245,14 @@ def post_id(pid, anything=None, v=None):
 	else:
 		if post.is_banned and not (v and (v.admin_level > 1 or post.author_id == v.id)): template = "submission_banned.html"
 		else: template = "submission.html"
-		return render_template(template, v=v, p=post, sort=sort, render_replies=True, offset=offset)
+		return render_template(template, v=v, p=post, ids=list(ids), sort=sort, render_replies=True, offset=offset)
 
 @app.post("/viewmore/<pid>/<sort>/<offset>")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
 @auth_desired
 def viewmore(v, pid, sort, offset):
 	offset = int(offset)
+	ids = set(int(x) for x in request.values.get("ids").split(','))
 	if v:
 		votes = g.db.query(CommentVote).filter_by(user_id=v.id).subquery()
 
@@ -262,12 +265,12 @@ def viewmore(v, pid, sort, offset):
 			votes.c.vote_type,
 			blocking.c.id,
 			blocked.c.id,
-		)
+		).filter(Comment.parent_submission == pid, Comment.author_id.notin_((AUTOPOLLER_ID, AUTOBETTER_ID)), Comment.is_pinned == None, Comment.id.notin_(ids))
 		
 		if not (v and v.shadowbanned) and not (v and v.admin_level > 1):
 			comments = comments.join(User, User.id == Comment.author_id).filter(User.shadowbanned == None)
  
-		comments=comments.filter(Comment.parent_submission == pid, Comment.author_id.notin_((AUTOPOLLER_ID, AUTOBETTER_ID)), Comment.is_pinned == None).join(
+		comments=comments.join(
 			votes,
 			votes.c.comment_id == Comment.id,
 			isouter=True
@@ -288,7 +291,7 @@ def viewmore(v, pid, sort, offset):
 			comment.is_blocking = c[2] or 0
 			comment.is_blocked = c[3] or 0
 			output.append(comment)
-				
+		
 		comments = comments.filter(Comment.level == 1)
 
 		if sort == "new":
@@ -305,9 +308,8 @@ def viewmore(v, pid, sort, offset):
 		first = [c[0] for c in comments.filter(or_(and_(Comment.slots_result == None, Comment.blackjack_result == None), func.length(Comment.body) > 20)).all()]
 		second = [c[0] for c in comments.filter(or_(Comment.slots_result != None, Comment.blackjack_result != None), func.length(Comment.body) <= 20).all()]
 		comments = first + second
-		comments = comments[offset:]
 	else:
-		comments = g.db.query(Comment).join(User, User.id == Comment.author_id).filter(User.shadowbanned == None, Comment.parent_submission == pid, Comment.author_id.notin_((AUTOPOLLER_ID, AUTOBETTER_ID)), Comment.level == 1, Comment.is_pinned == None)
+		comments = g.db.query(Comment).join(User, User.id == Comment.author_id).filter(User.shadowbanned == None, Comment.parent_submission == pid, Comment.author_id.notin_((AUTOPOLLER_ID, AUTOBETTER_ID)), Comment.level == 1, Comment.is_pinned == None, Comment.id.notin_(ids))
 
 		if sort == "new":
 			comments = comments.order_by(Comment.created_utc.desc())
@@ -331,20 +333,21 @@ def viewmore(v, pid, sort, offset):
 	if post.created_utc > 1638672040:
 		for comment in comments:
 			comments2.append(comment)
+			ids.add(comment.id)
 			count += g.db.query(Comment.id).filter_by(parent_submission=post.id, top_comment_id=comment.id).count() + 1
-			offset += 1
 			if count > 50: break
 	else:
 		for comment in comments:
 			comments2.append(comment)
+			ids.add(comment.id)
 			count += g.db.query(Comment.id).filter_by(parent_submission=post.id, parent_comment_id=comment.id).count() + 1
-			offset += 1
 			if count > 10: break
-
-	if len(comments) == len(comments2): offset = None
+	
+	if len(comments) == len(comments2): offset = 0
+	else: offset += 1
 	comments = comments2
 
-	return render_template("comments.html", v=v, comments=comments, render_replies=True, pid=pid, sort=sort, offset=offset, ajax=True)
+	return render_template("comments.html", v=v, comments=comments, ids=list(ids), render_replies=True, pid=pid, sort=sort, offset=offset, ajax=True)
 
 
 @app.post("/morecomments/<cid>")
@@ -508,6 +511,7 @@ def edit_post(pid, v):
 				is_pinned='AutoJanny',
 				distinguish_level=6,
 				body_html=body_jannied_html,
+				ghost=p.ghost
 				)
 
 			g.db.add(c_jannied)
@@ -515,7 +519,36 @@ def edit_post(pid, v):
 
 			n = Notification(comment_id=c_jannied.id, user_id=v.id)
 			g.db.add(n)
-		
+
+		elif request.host == 'rdrama.net' and 'nigg' in f'{p.body}{p.title}'.lower() and not v.nwordpass:
+
+			p.is_banned = True
+			p.ban_reason = "AutoJanny"
+			g.db.add(p)
+
+			c_jannied = Comment(author_id=NOTIFICATIONS_ID,
+				parent_submission=p.id,
+				level=1,
+				over_18=False,
+				is_bot=True,
+				app_id=None,
+				is_pinned='AutoJanny',
+				distinguish_level=6,
+				body_html=no_pass_phrase,
+				ghost=p.ghost
+				)
+
+			g.db.add(c_jannied)
+			g.db.flush()
+
+			v.ban(reason="White people nonsense.", days=0.007)
+
+			text = "Your account has been suspended for 10 minutes for the following reason:\n\n> Unsanctioned NWord"
+			send_repeatable_notification(v.id, text)		
+
+			n = Notification(comment_id=c_jannied.id, user_id=v.id)
+			g.db.add(n)
+
 
 		notify_users = NOTIFY_USERS(body_html, v) | NOTIFY_USERS2(title, v)
 		
@@ -667,7 +700,7 @@ def thumbnail_thread(pid):
 	db.add(post)
 	db.commit()
 
-	if SITE == 'rdrama.net' and random.random() < 0.02:
+	if SITE == 'rdrama.net' and random.random() < 0.01:
 		for t in ("submission","comment"):
 			for term in ('rdrama','freeghettohoes.biz','marsey'):
 				for i in requests.get(f'https://api.pushshift.io/reddit/{t}/search?html_decode=true&q={term}&size=10').json()["data"]:
@@ -790,8 +823,9 @@ def submit_post(v):
 
 		domain_obj = get_domain(domain)
 		if domain_obj:
-			if request.headers.get("Authorization") or request.headers.get("xhr"): return {"error":domain_obj.reason}, 400
-			return render_template("submit.html", v=v, error=domain_obj.reason, title=title, url=url, body=request.values.get("body", "")), 400
+			reason = f"Remove the {domain_obj.domain} link from your post and try again. {domain_obj.reason}"
+			if request.headers.get("Authorization") or request.headers.get("xhr"): return {"error":reason}, 400
+			return render_template("submit.html", v=v, error=reason, title=title, url=url, body=request.values.get("body", "")), 400
 		elif "twitter.com" == domain:
 			try: embed = requests.get("https://publish.twitter.com/oembed", timeout=5, params={"url":url, "omit_script":"t"}).json()["html"]
 			except: embed = None
@@ -1074,6 +1108,33 @@ def submit_post(v):
 
 		g.db.add(c_jannied)
 		g.db.flush()
+
+		n = Notification(comment_id=c_jannied.id, user_id=v.id)
+		g.db.add(n)
+
+	elif request.host == 'rdrama.net' and 'nigg' in f'{new_post.body}{new_post.title}'.lower() and not v.nwordpass:
+
+		new_post.is_banned = True
+		new_post.ban_reason = "AutoJanny"
+
+		c_jannied = Comment(author_id=NOTIFICATIONS_ID,
+			parent_submission=new_post.id,
+			level=1,
+			over_18=False,
+			is_bot=True,
+			app_id=None,
+			is_pinned='AutoJanny',
+			distinguish_level=6,
+			body_html=no_pass_phrase,
+			)
+
+		g.db.add(c_jannied)
+		g.db.flush()
+
+		v.ban(reason="White people nonsense.", days=0.007)
+
+		text = "Your account has been suspended for 10 minutes for the following reason:\n\n> Unsanctioned NWord"
+		send_repeatable_notification(v.id, text)		
 
 		n = Notification(comment_id=c_jannied.id, user_id=v.id)
 		g.db.add(n)
