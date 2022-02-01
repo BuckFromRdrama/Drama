@@ -175,7 +175,7 @@ def club_ban(v, username):
 
 @app.post("/@<username>/make_meme_admin")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
-@admin_level_required(2)
+@admin_level_required(3)
 def make_meme_admin(v, username):
 	if request.host == 'pcmemes.net' or (SITE_NAME == 'Drama' and v.admin_level > 2) or (request.host != 'rdrama.net' and request.host != 'pcmemes.net'):
 		user = get_user(username)
@@ -188,7 +188,7 @@ def make_meme_admin(v, username):
 
 @app.post("/@<username>/remove_meme_admin")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
-@admin_level_required(2)
+@admin_level_required(3)
 def remove_meme_admin(v, username):
 	if request.host == 'pcmemes.net' or (SITE_NAME == 'Drama' and v.admin_level > 2) or (request.host != 'rdrama.net' and request.host != 'pcmemes.net'):
 		user = get_user(username)
@@ -231,9 +231,7 @@ def monthly(v):
 			u.procoins += procoins
 			g.db.add(u)
 			send_repeatable_notification(u.id, f"You were given {procoins} Marseybux for the month of {month}! You can use them to buy awards in the [shop](/shop).")
-		else:
-			print(u.username)
-			continue
+		else: print(u.username)
 
 	if request.host == 'pcmemes.net':
 		u = g.db.query(User).filter_by(id=KIPPY_ID).one()
@@ -389,7 +387,7 @@ def purge_cache(v):
 
 
 @app.post("/admin/under_attack")
-@admin_level_required(2)
+@admin_level_required(3)
 def under_attack(v):
 	if environ.get('under_attack'):
 		environ["under_attack"] = ""
@@ -763,6 +761,12 @@ def shadowban(user_id, v):
 	
 	cache.delete_memoized(frontlist)
 
+	body = f"@{v.username} has shadowbanned @{user.username}"
+
+	body_html = sanitize(body)
+
+	send_admin(NOTIFICATIONS_ID, body_html, v.id)
+
 	g.db.commit()
 	return {"message": "User shadowbanned!"}
 
@@ -899,11 +903,13 @@ def ban_user(user_id, v):
 	if days == 0: duration = "permanent"
 	elif days == 1: duration = "1 day"
 	else: duration = f"{days} days"
+
+	note = f'reason: "{reason}", duration: {duration}'
 	ma=ModAction(
 		kind="ban_user",
 		user_id=v.id,
 		target_user_id=user.id,
-		_note=f'reason: "{reason}", duration: {duration}'
+		_note=note
 		)
 	g.db.add(ma)
 
@@ -918,6 +924,14 @@ def ban_user(user_id, v):
 			comment = get_comment(comment)
 			comment.bannedfor = True
 			g.db.add(comment)
+
+
+	body = f"@{v.username} has banned @{user.username} ({note})"
+
+	body_html = sanitize(body)
+
+	send_admin(NOTIFICATIONS_ID, body_html, v.id)
+
 	g.db.commit()
 
 	if 'redir' in request.values: return redirect(user.url)
@@ -931,8 +945,7 @@ def unban_user(user_id, v):
 
 	user = g.db.query(User).filter_by(id=user_id).one_or_none()
 
-	if not user:
-		abort(400)
+	if not user: abort(400)
 
 	user.is_banned = 0
 	user.unban_utc = 0
@@ -1219,7 +1232,7 @@ def admin_dump_cache(v):
 
 
 @app.get("/admin/banned_domains/")
-@admin_level_required(2)
+@admin_level_required(3)
 def admin_banned_domains(v):
 
 	banned_domains = g.db.query(BannedDomain).all()
@@ -1227,7 +1240,7 @@ def admin_banned_domains(v):
 
 @app.post("/admin/banned_domains")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
-@admin_level_required(2)
+@admin_level_required(3)
 def admin_toggle_ban_domain(v):
 
 	domain=request.values.get("domain", "").strip()

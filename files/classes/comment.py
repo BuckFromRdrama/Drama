@@ -408,15 +408,18 @@ class Comment(Base):
 		return body
 
 	@lazy
-	def collapse_for_user(self, v):
+	def collapse_for_user(self, v, path):
+		if v and self.author_id == v.id: return False
+
+		if path == '/admin/removed/comments': return False
 
 		if self.over_18 and not (v and v.over_18) and not (self.post and self.post.over_18): return True
 
-		if not v: return False
-			
-		if v.filter_words and self.body and any(x in self.body for x in v.filter_words): return True
-		
 		if self.is_banned: return True
+
+		if path.startswith('/post') and (self.slots_result or self.blackjack_result) and len(self.body) <= 20 and self.level > 1: return True
+			
+		if v and v.filter_words and self.body and any(x in self.body for x in v.filter_words): return True
 		
 		return False
 
