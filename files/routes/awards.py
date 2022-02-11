@@ -56,8 +56,6 @@ AWARDS3 = {
 @app.get("/settings/shop")
 @auth_required
 def shop(v):
-	if request.host == 'pcmemes.net': abort(403)
-
 	AWARDS = deepcopy(AWARDS2)
 
 	for val in AWARDS.values(): val["owned"] = 0
@@ -87,8 +85,6 @@ def shop(v):
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
 @auth_required
 def buy(v, award):
-	if request.host == 'pcmemes.net': abort(403)
-
 	if award == 'benefactor' and not request.values.get("mb"):
 		return {"error": "You can only buy the Benefactor award with marseybux."}, 403
 
@@ -194,10 +190,8 @@ def buy(v, award):
 @app.get("/post/<pid>/awards")
 @app.post("/post/<pid>/awards")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
-@auth_required
+@is_not_permabanned
 def award_post(pid, v):
-	if request.host == 'pcmemes.net': abort(403)
-
 	if v.shadowbanned: return render_template('errors/500.html', err=True, v=v), 500
 	
 	kind = request.values.get("kind", "").strip()
@@ -229,12 +223,12 @@ def award_post(pid, v):
 
 	note = request.values.get("note", "").strip()
 
-	if v.id != post.author.id:
+	author = post.author
+
+	if v.id != author.id:
 		msg = f"@{v.username} has given your [post]({post.permalink}) the {AWARDS[kind]['title']} Award!"
 		if note: msg += f"\n\n> {note}"
-		send_repeatable_notification(post.author.id, msg)
-
-	author = post.author
+		send_repeatable_notification(author.id, msg)
 
 	if kind == "benefactor" and author.id == v.id:
 		return {"error": "You can't use this award on yourself."}, 400
@@ -414,15 +408,15 @@ def award_post(pid, v):
 	elif kind == "rehab":
 		if author.rehab: author.rehab += 86400
 		else: author.rehab = int(time.time()) + 86400
-		if not v.has_badge(109):
-			badge = Badge(user_id=v.id, badge_id=109)
+		if not author.has_badge(109):
+			badge = Badge(user_id=author.id, badge_id=109)
 			g.db.add(badge)
 			g.db.flush()
-			send_notification(v.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
+			send_notification(author.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
 
-	if post.author.received_award_count: post.author.received_award_count += 1
-	else: post.author.received_award_count = 1
-	g.db.add(post.author)
+	if author.received_award_count: author.received_award_count += 1
+	else: author.received_award_count = 1
+	g.db.add(author)
 
 	g.db.commit()
 	if request.referrer and len(request.referrer) > 1:
@@ -434,10 +428,8 @@ def award_post(pid, v):
 @app.get("/comment/<cid>/awards")
 @app.post("/comment/<cid>/awards")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")
-@auth_required
+@is_not_permabanned
 def award_comment(cid, v):
-	if request.host == 'pcmemes.net': abort(403)
-
 	if v.shadowbanned: return render_template('errors/500.html', err=True, v=v), 500
 
 	kind = request.values.get("kind", "").strip()
@@ -469,12 +461,12 @@ def award_comment(cid, v):
 
 	note = request.values.get("note", "").strip()
 
-	if v.id != c.author.id:
+	author = c.author
+
+	if v.id != author.id:
 		msg = f"@{v.username} has given your [comment]({c.permalink}) the {AWARDS[kind]['title']} Award!"
 		if note: msg += f"\n\n> {note}"
-		send_repeatable_notification(c.author.id, msg)
-
-	author = c.author
+		send_repeatable_notification(author.id, msg)
 
 	if kind == "benefactor" and author.id == v.id:
 		return {"error": "You can't use this award on yourself."}, 400
@@ -648,15 +640,15 @@ def award_comment(cid, v):
 	elif kind == "rehab":
 		if author.rehab: author.rehab += 86400
 		else: author.rehab = int(time.time()) + 86400
-		if not v.has_badge(109):
-			badge = Badge(user_id=v.id, badge_id=109)
+		if not author.has_badge(109):
+			badge = Badge(user_id=author.id, badge_id=109)
 			g.db.add(badge)
 			g.db.flush()
-			send_notification(v.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
+			send_notification(author.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
 
-	if c.author.received_award_count: c.author.received_award_count += 1
-	else: c.author.received_award_count = 1
-	g.db.add(c.author)
+	if author.received_award_count: author.received_award_count += 1
+	else: author.received_award_count = 1
+	g.db.add(author)
 
 	g.db.commit()
 	if request.referrer and len(request.referrer) > 1 and request.host in request.referrer:

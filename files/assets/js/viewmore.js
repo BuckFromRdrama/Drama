@@ -3,17 +3,15 @@ function viewmore(pid,sort,offset,ids) {
     btn.disabled = true;
     btn.innerHTML = "Requesting...";
     var form = new FormData();
-	form.append("formkey", formkey());
-	form.append("ids", ids);
     const xhr = new XMLHttpRequest();
-    xhr.open("post", `/viewmore/${pid}/${sort}/${offset}`);
+    xhr.open("get", `/viewmore/${pid}/${sort}/${offset}?ids=${ids}`);
     xhr.setRequestHeader('xhr', 'xhr');
     xhr.onload=function(){
         if (xhr.status==200) {
             document.getElementById(`viewmore-${offset}`).innerHTML = xhr.response.replace(/data-src/g, 'src').replace(/data-cfsrc/g, 'src').replace(/style="display:none;visibility:hidden;"/g, '');
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function(element){
-                return new bootstrap.Tooltip(element);
+                return bootstrap.Tooltip.getOrCreateInstance(element);
             });
             popovertrigger()
             btn.disabled = false;

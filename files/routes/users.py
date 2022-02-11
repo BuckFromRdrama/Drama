@@ -256,9 +256,9 @@ def transfer_coins(v, username):
 		amount = request.values.get("amount", "").strip()
 		amount = int(amount) if amount.isdigit() else None
 
-		if amount is None or amount <= 0: return {"error": f"Invalid amount of coins."}, 400
-		if v.coins < amount: return {"error": f"You don't have enough coins."}, 400
-		if amount < 100: return {"error": f"You have to gift at least 100 coins."}, 400
+		if amount is None or amount <= 0: return {"error": "Invalid amount of coins."}, 400
+		if v.coins < amount: return {"error": "You don't have enough coins."}, 400
+		if amount < 100: return {"error": "You have to gift at least 100 coins."}, 400
 
 		if not v.patron and not receiver.patron and not v.alts_patron and not receiver.alts_patron: tax = math.ceil(amount*0.03)
 		else: tax = 0
@@ -275,7 +275,7 @@ def transfer_coins(v, username):
 		g.db.commit()
 		return {"message": f"{amount-tax} coins transferred!"}, 200
 
-	return {"message": f"You can't transfer coins to yourself!"}, 400
+	return {"message": "You can't transfer coins to yourself!"}, 400
 
 
 @app.post("/@<username>/transfer_bux")
@@ -295,11 +295,11 @@ def transfer_bux(v, username):
 		if amount < 100: return {"error": "You have to gift at least 100 marseybux."}, 400
 
 		log_message = f"@{v.username} has transferred {amount} Marseybux to @{receiver.username}"
-		send_repeatable_notification(CARP_ID, log_message)
+		send_repeatable_notification(TAX_NOTIF_ID, log_message)
 
 		receiver.procoins += amount
 		v.procoins -= amount
-		send_repeatable_notification(TAX_NOTIF_ID, f":marseycapitalistmanlet: @{v.username} has gifted you {amount} marseybux!")
+		send_repeatable_notification(receiver.id, f":marseycapitalistmanlet: @{v.username} has gifted you {amount} marseybux!")
 		g.db.add(receiver)
 		g.db.add(v)
 
@@ -494,28 +494,30 @@ def message2(v, username):
 		if len(message) > 500: notifbody = message[:500] + '...'
 		else: notifbody = message
 
-		beams_client.publish_to_interests(
-			interests=[f'{request.host}{user.id}'],
-			publish_body={
-				'web': {
-					'notification': {
-						'title': f'New message from @{v.username}',
-						'body': notifbody,
-						'deep_link': f'{SITE_FULL}/notifications?messages=true',
-						'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp',
+		try:
+			beams_client.publish_to_interests(
+				interests=[f'{request.host}{user.id}'],
+				publish_body={
+					'web': {
+						'notification': {
+							'title': f'New message from @{v.username}',
+							'body': notifbody,
+							'deep_link': f'{SITE_FULL}/notifications?messages=true',
+							'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp?a=1010',
+						}
+					},
+					'fcm': {
+						'notification': {
+							'title': f'New message from @{v.username}',
+							'body': notifbody,
+						},
+						'data': {
+							'url': '/notifications?messages=true',
+						}
 					}
 				},
-				'fcm': {
-					'notification': {
-						'title': f'New message from @{v.username}',
-						'body': notifbody,
-					},
-					'data': {
-						'url': '/notifications?messages=true',
-					}
-				}
-			},
-		)
+			)
+		except: pass
 
 	g.db.commit()
 
@@ -562,28 +564,30 @@ def messagereply(v):
 			if len(message) > 500: notifbody = message[:500] + '...'
 			else: notifbody = message
 			
-			beams_client.publish_to_interests(
-				interests=[f'{request.host}{user_id}'],
-				publish_body={
-					'web': {
-						'notification': {
-							'title': f'New message from @{v.username}',
-							'body': notifbody,
-							'deep_link': f'{SITE_FULL}/notifications?messages=true',
-							'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp',
+			try:
+				beams_client.publish_to_interests(
+					interests=[f'{request.host}{user_id}'],
+					publish_body={
+						'web': {
+							'notification': {
+								'title': f'New message from @{v.username}',
+								'body': notifbody,
+								'deep_link': f'{SITE_FULL}/notifications?messages=true',
+								'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp"a=1008',
+							}
+						},
+						'fcm': {
+							'notification': {
+								'title': f'New message from @{v.username}',
+								'body': notifbody,
+							},
+							'data': {
+								'url': '/notifications?messages=true',
+							}
 						}
 					},
-					'fcm': {
-						'notification': {
-							'title': f'New message from @{v.username}',
-							'body': notifbody,
-						},
-						'data': {
-							'url': '/notifications?messages=true',
-						}
-					}
-				},
-			)
+				)
+			except: pass
 
 
 	if new_comment.top_comment.sentto == 0:
@@ -609,7 +613,12 @@ def mfa_qr(secret, v):
 
 	img.save(mem, format="PNG")
 	mem.seek(0, 0)
-	return send_file(mem, mimetype="image/png", as_attachment=False)
+
+	try: f = send_file(mem, mimetype="image/png", as_attachment=False)
+	except:
+		print('/2faqr/<secret>', flush=True)
+		abort(404)
+	return f
 
 
 @app.get("/is_available/<name>")
@@ -665,7 +674,7 @@ def following(username, v):
 @app.get("/views")
 @auth_required
 def visitors(v):
-	if request.host == 'rdrama.net' and v.admin_level < 1 and not v.patron: return render_template("errors/patron.html", v=v)
+	if SITE_NAME == 'Drama' and v.admin_level < 1 and not v.patron: return render_template("errors/patron.html", v=v)
 	viewers=sorted(v.viewers, key = lambda x: x.last_view_utc, reverse=True)
 	return render_template("viewers.html", v=v, viewers=viewers)
 
@@ -678,7 +687,7 @@ def u_username(username, v=None):
 
 	if not v and not request.path.startswith('/logged_out'): return redirect(f"{SITE_FULL}/logged_out{request.full_path}")
 
-	if v and request.path.startswith('/logged_out'): v = None
+	if v and request.path.startswith('/logged_out'): return redirect(SITE_FULL + request.full_path.replace('/logged_out',''))
 
 
 
@@ -785,7 +794,7 @@ def u_username_comments(username, v=None):
 
 	if not v and not request.path.startswith('/logged_out'): return redirect(f"{SITE_FULL}/logged_out{request.full_path}")
 
-	if v and request.path.startswith('/logged_out'): v = None
+	if v and request.path.startswith('/logged_out'): return redirect(SITE_FULL + request.full_path.replace('/logged_out',''))
 
 	user = get_user(username, v=v)
 
@@ -848,7 +857,7 @@ def u_username_comments(username, v=None):
 	elif sort == "old":
 		comments = comments.order_by(Comment.created_utc.asc())
 	elif sort == "controversial":
-		comments = comments.order_by(-1 * Comment.upvotes * Comment.downvotes * Comment.downvotes)
+		comments = comments.order_by((Comment.upvotes+1)/(Comment.downvotes+1) + (Comment.downvotes+1)/(Comment.upvotes+1), Comment.downvotes.desc())
 	elif sort == "top":
 		comments = comments.order_by(Comment.downvotes - Comment.upvotes)
 	elif sort == "bottom":
@@ -959,12 +968,10 @@ def remove_follow(username, v):
 @auth_desired
 def user_profile_uid(v, id):
 	if not v and not request.path.startswith('/logged_out'): return redirect(f"{SITE_FULL}/logged_out{request.full_path}")
-	if v and request.path.startswith('/logged_out'): v = None
+	if v and request.path.startswith('/logged_out'): return redirect(SITE_FULL + request.full_path.replace('/logged_out',''))
 
 	try: id = int(id)
-	except:
-		try: id = int(id, 36)
-		except: abort(404)
+	except: abort(404)
 	x=get_account(id)
 	return redirect(x.profile_url)
 

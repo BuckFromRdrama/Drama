@@ -57,6 +57,10 @@
 									<i class="fad fa-user-tag text-info align-middle ml-2" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="Original Username: @{{u.original_username}}"></i>
 								</span>
 								{% endif %}
+								{% if SITE_NAME=='Drama' and u.house %}
+									<img src="/assets/images/{{SITE_NAME}}/houses/{{u.house}}.webp?a=5" height="20" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="House {{u.house}}">
+								{% endif %}
+
 								{% if u.verified %}<span><i class="fas fa-badge-check align-middle ml-1" style="color:{% if u.verifiedcolor %}#{{u.verifiedcolor}}{% else %}#1DA1F2{% endif %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="{{u.verified}}"></i></span>{% endif %}
 								{% if u.admin_level > 1 or (u.admin_level == 1 and not(v and v.admin_level > 1)) %}
 								<span>
@@ -267,9 +271,11 @@
 
 
 						<pre></pre>
-
-						<a id="verify" class="{% if u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/verify/{{u.id}}','verify','unverify')">Verify</a>
-						<a id="unverify" class="{% if not u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/unverify/{{u.id}}','verify','unverify')">Unverify</a>
+						
+						{% if v.admin_level > 2 %}
+							<a id="verify" class="{% if u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/verify/{{u.id}}','verify','unverify')">Verify</a>
+							<a id="unverify" class="{% if not u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/unverify/{{u.id}}','verify','unverify')">Unverify</a>
+						{% endif %}
 
 						<pre></pre>
 						<form action="/admin/unnuke_user" method="post">
@@ -312,9 +318,9 @@
 					<div>
 						{% for b in u.badges %}
 							{% if b.url %}
-								<a rel="nofollow noopener noreferrer" href="{{b.url}}"><img alt="{{b.name}}" width=55 height=60 loading="lazy" src="{{b.path}}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}"></a>
+								<a rel="nofollow noopener noreferrer" href="{{b.url}}"><img alt="{{b.name}}" width=55 height=60 loading="lazy" src="{{b.path}}?a=1010" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}"></a>
 							{% else %}
-								<img alt="{{b.name}}" width=55 height=60 loading="lazy" src="{{b.path}}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}">
+								<img alt="{{b.name}}" width=55 height=60 loading="lazy" src="{{b.path}}?a=1010" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}">
 							{% endif %}
 						{% endfor %}
 					</div>
@@ -345,9 +351,13 @@
 			</div>
 			<div class="mt-n3 py-3">
 				{% if u.is_suspended %}
-					<h5 class="text-primary">>BANNED USER{% if u.ban_reason %}: {{u.ban_reason}}{% endif %}</h5>
+					<h5 class="text-primary">BANNED USER{% if u.ban_reason %}: {{u.ban_reason}}{% endif %}</h5>
 					{% if u.unban_utc %}<h5 class="text-primary">>{{u.unban_string}}</h5>{% endif %}
 				{% endif %}
+				{% if SITE_NAME=='Drama' and u.house %}
+					<img src="/assets/images/{{SITE_NAME}}/houses/{{u.house}}.webp?a=5" height="20" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="House {{u.house}}">
+				{% endif %}
+
 				{% if u.verified %}<span><i class="fas fa-badge-check align-middle ml-1" style="color:{% if u.verifiedcolor %}#{{u.verifiedcolor}}{% else %}#1DA1F2{% endif %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="{{u.verified}}"></i></span>&nbsp;{% endif %}
 				<h1 class="h5 d-inline-block" style="color: #{{u.namecolor}}"><span {% if u.patron %}class="patron" style="background-color:#{{u.namecolor}}"{% endif %}>{{u.username}}</span></h1>
 				{% if u.username != u.original_username %}
@@ -420,9 +430,9 @@
 				<div class="mb-3">
 					{% for b in u.badges %}
 						{% if b.url %}
-							<a rel="nofollow noopener noreferrer" href="{{b.url}}"><img alt="{{b.name}}" width=29.33 height=32 loading="lazy" src="{{b.path}}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}"></a>
+							<a rel="nofollow noopener noreferrer" href="{{b.url}}"><img alt="{{b.name}}" width=29.33 height=32 loading="lazy" src="{{b.path}}?a=1010" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}"></a>
 						{% else %}
-							<img alt="{{b.name}}" width=29.33 height=32 loading="lazy" src="{{b.path}}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}">
+							<img alt="{{b.name}}" width=29.33 height=32 loading="lazy" src="{{b.path}}?a=1010" data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{b.text}}" data-bs-original-title="{{b.text}}">
 						{% endif %}
 					{% endfor %}
 				</div>
@@ -477,13 +487,13 @@
 					<div class="d-none mt-3 profile-toggleable-mobile" id="coin-transfer-mobile">
 						<input autocomplete="off" id="coin-transfer-amount-mobile" class="form-control" name="amount" type="number" oninput="updateTax(true)">
 						<div>{{u.username}} will receive <span id="coins-transfer-taxed-mobile">0</span> coins</div>
-						<button class="btn btn-primary mt-3" onclick="transferCoins(true)">Gift</button>
+						<button class="btn btn-primary mt-2 mb-3" onclick="transferCoins(true)">Gift</button>
 					</div>
 
 					<div class="d-none mt-3 profile-toggleable-mobile" id="bux-transfer-mobile">
 						<input autocomplete="off" id="bux-transfer-amount-mobile" class="form-control" name="amount" type="number" oninput="updateBux(true)">
 						<div>{{u.username}} will receive <span id="bux-transfer-taxed-mobile">0</span> marseybux</div>
-						<button class="btn btn-primary mt-3" onclick="transferBux(true)">Gift</button>
+						<button class="btn btn-primary mt-2 mb-3" onclick="transferBux(true)">Gift</button>
 					</div>
 
 					{% if v.admin_level > 1 %}
@@ -553,8 +563,10 @@
 
 						<pre></pre>
 
-						<a id="verify2" class="{% if u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/verify/{{u.id}}','verify2','unverify2')">Verify</a>
-						<a id="unverify2" class="{% if not u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/unverify/{{u.id}}','verify2','unverify2')">Unverify</a>
+						{% if v.admin_level > 2 %}
+							<a id="verify2" class="{% if u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/verify/{{u.id}}','verify2','unverify2')">Verify</a>
+							<a id="unverify2" class="{% if not u.verified %}d-none{% endif %} btn btn-success" role="button" onclick="post_toast2('/admin/unverify/{{u.id}}','verify2','unverify2')">Unverify</a>
+						{% endif %}
 
 						<pre></pre>
 						<form action="/admin/unnuke_user" method="post">
@@ -692,11 +704,11 @@
 
 {% if v %}
 <div id='tax' class="d-none">{% if v.patron or u.patron or v.alts_patron or u.alts_patron %}0{% else %}0.03{% endif %}</div>
-<script src="/static/assets/js/userpage_v.js?a=222"></script>
+<script src="/static/assets/js/userpage_v.js?a=240"></script>
 <div id="username" class="d-none">{{u.username}}</div>
 {% endif %}
 
-<script src="/static/assets/js/userpage.js?a=222"></script>
+<script src="/static/assets/js/userpage.js?a=240"></script>
 
 {% endblock %}
 
@@ -722,7 +734,7 @@
 </nav>
 {% endif %}
 
-<script src="/static/assets/js/marked.js?a=220"></script>
+<script src="/static/assets/js/marked.js?a=241"></script>
 
 <style>
 	.userbanner {

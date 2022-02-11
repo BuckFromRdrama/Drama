@@ -185,9 +185,10 @@
 	{% set dealer_hand = split_result[1].split('/')[0] if blackjack_status == 'active' else split_result[1] %}
 	{% set dealer_hand = dealer_hand.replace('X', '10') %}
 	{% set wager = split_result[4] %}
+	{% set kind = split_result[5] %}
 {% endif %}
 
-<div id="comment-{{c.id}}" class="anchor {% if c.unread %}unread{% endif %} comment {% if standalone and level==1 %} mt-0{% endif %} {% if c.collapse_for_user(v, request.path) and (standalone and c.over_18 and not (v and v.over_18)) %}collapsed{% endif %}" style="{% if isreply %}padding-left:0!important;{% elif not c.unread %}border-left: 2px solid {% if c.ghost %}var(--primary){% else %}#{{c.author.namecolor}};{% endif %}{% endif %} {% if c.unread %}padding: 10px 10px 10px !important;{% endif %}">
+<div id="comment-{{c.id}}" class="anchor {% if c.unread %}unread{% endif %} comment {% if standalone and level==1 %} mt-0{% endif %} {% if c.collapse_for_user(v,request.path) %}collapsed{% endif %}" style="{% if isreply %}padding-left:0!important;{% elif not c.unread %}border-left: 2px solid {% if c.ghost %}var(--primary){% else %}#{{c.author.namecolor}};{% endif %}{% endif %} {% if c.unread %}padding: 10px 10px 10px !important;{% endif %}">
 	{% if not isreply %}
 		<span class="comment-collapse-desktop d-none d-md-block" {% if not c.unread %}style="border-left: 2px solid {% if c.ghost %}var(--primary){% else %}#{{c.author.namecolor}}{% endif %}"{% endif %} onclick="collapse_comment('{{c.id}}')"></span>
 	{% endif %}
@@ -221,13 +222,19 @@
 				{% if c.is_blocking %}<i class="fas fa-user-minus text-warning" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="You're blocking this user, but you can see this comment because you're an admin"></i>{% endif %}
 				{% if c.is_blocked %}<i class="fas fa-user-minus text-danger" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="This user is blocking you."></i>{% endif %}
 
-				{% if c.author.verified and not c.ghost %}<i class="fas fa-badge-check align-middle ml-1" style="color:{% if c.author.verifiedcolor %}#{{c.author.verifiedcolor}}{% else %}#1DA1F2{% endif %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="{{c.author.verified}}"></i>
-				{% endif %}
-
 				{% if c.ghost %}
 					👻
 				{% else %}
-					<a class="user-name text-decoration-none" onclick='popclick({{c.author.json_popover(v) | tojson}})' data-bs-placement="bottom" data-bs-toggle="popover" data-bs-trigger="click" data-content-id="popover" role="button" tabindex="0" style="color:#{{c.author.namecolor}}; font-size:12px; font-weight:bold;"><img alt="@{{c.author_name}}'s profile picture" loading="lazy" src="{{c.author.profile_url}}" class="profile-pic-25 mr-2"><span {% if c.author.patron and not c.distinguish_level %}class="patron" style="background-color:#{{c.author.namecolor}};"{% elif c.distinguish_level and request.host == 'rdrama.net' %}class="mod"{% endif %}>{{c.author_name}}</span></a>
+					{% if SITE_NAME=='Drama' and c.author.house %}
+						<img src="/assets/images/{{SITE_NAME}}/houses/{{c.author.house}}.webp?a=5" height="20" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="House {{c.author.house}}">
+					{% endif %}
+
+					{% if c.author.verified %}<i class="fas fa-badge-check align-middle ml-1" style="color:{% if c.author.verifiedcolor %}#{{c.author.verifiedcolor}}{% else %}#1DA1F2{% endif %}" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-original-title="{{c.author.verified}}"></i>
+					{% endif %}
+					{% if not c.author %}
+						{{c.print()}}
+					{% endif %}
+					<a class="user-name text-decoration-none" onclick='popclick({{c.author.json_popover(v) | tojson}})' data-bs-placement="bottom" data-bs-toggle="popover" data-bs-trigger="click" data-content-id="popover" role="button" tabindex="0" style="color:#{{c.author.namecolor}}; font-size:12px; font-weight:bold;"><img alt="@{{c.author_name}}'s profile picture" loading="lazy" src="{{c.author.profile_url}}" class="profile-pic-25 mr-2"><span {% if c.author.patron and not c.distinguish_level %}class="patron" style="background-color:#{{c.author.namecolor}};"{% elif c.distinguish_level and SITE_NAME == 'Drama' %}class="mod"{% endif %}>{{c.author_name}}</span></a>
 					{% if c.author.customtitle %}&nbsp;<bdi style="color: #{{c.author.titlecolor}}">&nbsp;{% if c.author.quadrant %}<img alt="{{c.author.quadrant}} quadrant" loading="lazy" height="20" src="/static/assets/images/quadrants/{{c.author.quadrant}}.webp?a=1008">{% endif %}{{c.author.customtitle | safe}}</bdi>{% endif %}
 				{% endif %}
 
@@ -255,20 +262,21 @@
 				{% endif %}
 
 				{% if c.blackjack_result %}
+				{% set currency_kind = "Coins" if kind == "coins" else "Marseybucks" %}
 				<em>{{player_hand}} vs. {{dealer_hand}}</em>
 					{% if blackjack_status == 'active' and v.id == c.author_id %}
 					<button class="btn btn-success small" style="text-transform: uppercase; padding: 2px;" onclick="handle_blackjack_action('{{c.id}}', 'hit')">Hit</button>
 					<button class="btn btn-danger small" style="text-transform: uppercase; padding: 2px;" onclick="handle_blackjack_action('{{c.id}}', 'stay')">Stay</button>
 					{% elif blackjack_status == 'push' %}
-					<strong>Pushed.</strong>
+					<strong>Pushed. Refunded {{wager}} {{currency_kind}}.</strong>
 					{% elif blackjack_status == 'bust' %}
-					<strong>Bust. Lost {{wager}} Coins.</strong>
+					<strong>Bust. Lost {{wager}} {{currency_kind}}.</strong>
 					{% elif blackjack_status == 'lost' %}
-					<strong>Lost {{wager}} Coins.</strong>
+					<strong>Lost {{wager}} {{currency_kind}}.</strong>
 					{% elif blackjack_status == 'won' %}
-					<strong>Won {{wager|int * 2}} Coins.</strong>
+					<strong>Won {{wager}} Coins.</strong>
 					{% elif blackjack_status == 'blackjack' %}
-					<strong>Blackjack! Won <span id="blackjack-result-{{c.id}}">{{(wager|int * 5/2)|round(0, 'floor')|int}}</span> Coins.</strong>
+					<strong>Blackjack! Won {{(wager|int * 3/2)|round(0, 'floor')|int}} {{currency_kind}}.</strong>
 					{% endif %}
 				{% endif %}
 			</div>
@@ -316,7 +324,7 @@
 							
 							<label class="btn btn-secondary format m-0" for="file-edit-reply-{{c.id}}">
 								<div id="filename-edit-reply-{{c.id}}"><i class="far fa-image"></i></div>
-								<input autocomplete="off" id="file-edit-reply-{{c.id}}" type="file" name="file" accept="image/*, video/*" {% if request.headers.get('cf-ipcountry')=="T1" %}disabled{% endif %} onchange="document.getElementById('filename-edit-reply-{{c.id}}').innerHTML='image/video';" hidden>
+								<input autocomplete="off" id="file-edit-reply-{{c.id}}" type="file" name="file" accept="image/*, video/*" {% if request.headers.get('cf-ipcountry')=="T1" %}disabled{% endif %} onchange="changename('filename-edit-reply-{{c.id}}','file-edit-reply-{{c.id}}')" hidden>
 							</label>
 						</div>
 						<a id="edit-btn-{{c.id}}" role="button" form="comment-edit-form-{{c.id}}" class="btn btn-primary ml-2 fl-r commentmob" onclick="comment_edit('{{c.id}}')">Save Edit</a> 
@@ -446,7 +454,7 @@
 						
 						<a class="btn caction nobackground px-1 text-muted" href="{{c.permalink}}"><i class="fas fa-book-open"></i>Context</a>
 
-						<button class="btn caction py-0 nobackground px-1 text-muted copy-link" role="button" role="button" data-clipboard-text="{% if request.host == 'rdrama.net' %}https://rdrama.com{{c.shortlink_context}}{% else %}{{c.permalink}}{% endif %}"><i class="fas fa-copy"></i>Copy link</button>
+						<button class="btn caction py-0 nobackground px-1 text-muted copy-link" role="button" role="button" data-clipboard-text="{% if SITE_NAME == 'Drama' %}https://rdrama.com{{c.shortlink_context}}{% else %}{{c.permalink}}{% endif %}"><i class="fas fa-copy"></i>Copy link</button>
 
 						{% if v %}
 							<button class="btn caction py-0 nobackground px-1 text-muted" data-bs-toggle="modal" data-bs-target="#reportCommentModal" onclick="report_commentModal('{{c.id}}','{{c.author_name}}',)"><i class="fas fa-flag fa-fw"></i>Report</button>
@@ -553,7 +561,7 @@
 						&nbsp;
 						<label class="btn btn-secondary format m-0" for="file-upload-reply-{{c.fullname}}">
 							<div id="filename-show-reply-{{c.fullname}}"><i class="far fa-image"></i></div>
-							<input autocomplete="off" id="file-upload-reply-{{c.fullname}}" type="file" name="file" accept="image/*, video/*" {% if request.headers.get('cf-ipcountry')=="T1" %}disabled{% endif %} onchange="document.getElementById('filename-show-reply-{{c.fullname}}').innerHTML='image/video';" hidden>
+							<input autocomplete="off" id="file-upload-reply-{{c.fullname}}" type="file" name="file" accept="image/*, video/*" {% if request.headers.get('cf-ipcountry')=="T1" %}disabled{% endif %} onchange="changename('filename-show-reply-{{c.fullname}}','file-upload-reply-{{c.fullname}}')" hidden>
 						</label>
 					</div>
 					<a id="save-reply-to-{{c.fullname}}" class="btn btn-primary ml-2 fl-r commentmob" onclick="post_comment('{{c.fullname}}', '{{c.post.id}}');" role="button">Comment</a>
@@ -616,7 +624,7 @@
 
 					{% if not c.ghost %}<a href="/votes?link={{c.fullname}}"><li class="list-group-item"><i class="fas fa-arrows-v"></i>Votes</li></a>{% endif %}
 
-					<a role="button" role="button" class="list-group-item copy-link" data-bs-dismiss="modal" data-clipboard-text="{% if request.host == 'rdrama.net' %}https://rdrama.com{{c.shortlink_context}}{% else %}{{c.permalink}}{% endif %}"><i class="fas fa-copy"></i>Copy link</a>
+					<a role="button" role="button" class="list-group-item copy-link" data-bs-dismiss="modal" data-clipboard-text="{% if SITE_NAME == 'Drama' %}https://rdrama.com{{c.shortlink_context}}{% else %}{{c.permalink}}{% endif %}"><i class="fas fa-copy"></i>Copy link</a>
 
 					<a class="list-group-item" href="{{c.permalink}}"><i class="fas fa-dna"></i>Context</a>
 
@@ -903,20 +911,20 @@
 	</style>
 
 	{% if v %}
-		<script src="/static/assets/js/marked.js?a=220"></script>
-		<script src="/static/assets/js/comments_v.js?a=239"></script>
+		<script src="/static/assets/js/marked.js?a=241"></script>
+		<script src="/static/assets/js/comments_v.js?a=243"></script>
 	{% endif %}
 
-	<script src="/static/assets/js/clipboard.js?a=220"></script>
+	<script src="/static/assets/js/clipboard.js?a=240"></script>
 
 	{% if v and v.admin_level > 1 %}
-		<script src="/static/assets/js/comments_admin.js?a=220"></script>
+		<script src="/static/assets/js/comments_admin.js?a=240"></script>
 	{% endif %}
 
 	{% include "expanded_image_modal.html" %}
 
-	<script src="/static/assets/js/comments+submission_listing.js?a=223"></script>
-	<script src="/static/assets/js/comments.js?a=221"></script>
+	<script src="/static/assets/js/comments+submission_listing.js?a=240"></script>
+	<script src="/static/assets/js/comments.js?a=242"></script>
 
 	<script>
 		{% if p and (not v or v.highlightcomments) %}

@@ -82,13 +82,13 @@ def NOTIFY_USERS2(text, v):
 		if id == 0: continue
 		if word in text.lower() and id not in notify_users and v.id != id: notify_users.add(id)
 
-	for i in re.finditer("(^|\s|\n)@((\w|-){1,25})", text, flags=re.A):
+	for i in re.finditer("(^|\s|\n)@((\w|-){1,25})", text, re.A):
 		user = get_user(i.group(2), graceful=True)
 		if user and not v.any_block_exists(user): notify_users.add(user.id)
 
 	return notify_users
 
-def send_admin(id, body_html, vid):
+def send_admin(id, body_html, vid=None):
 
 	new_comment = Comment(author_id=id,
 						  parent_submission=None,
