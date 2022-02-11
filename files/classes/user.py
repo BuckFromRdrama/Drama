@@ -432,7 +432,6 @@ class User(Base):
 	@lazy
 	def moderated_subs(self):
 		modded_subs = g.db.query(Mod.sub).filter_by(user_id=self.id).all()
-		print(modded_subs)
 		return modded_subs
 
 	def has_follower(self, user):
