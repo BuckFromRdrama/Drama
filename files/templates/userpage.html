@@ -154,7 +154,7 @@
 					<p class="text-uppercase my-0" style="font-weight: bold; font-size: 12px;">Moderator of</p>
 					{% for a in u.moderated_subs %}
 					<span class="d-inline-block mx-1">
-						<a href="{{site_full}}/s/{{a['sub']}}">/s/x{{a['sub']}}</a>
+						<a href="{{site_full}}/s/{{a['sub']}}">/s/{{a['sub']}}</a>
 					</span>
 					{% endfor %}
 				</div>
