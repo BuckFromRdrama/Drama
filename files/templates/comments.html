@@ -290,8 +290,9 @@
 				{% if c.wordle_result %}
 				<em>{{wordle_guesses}}</em>
 					{% if wordle_status == 'active' and v.id == c.author_id %}
-					<input autocomplete="off" id="guess_box" type="text" name="guess" class="form-control" placeholder='Enter your guess'></input>
-					<button type="submit" value="Submit" onclick="handle_wordle_action('{{c.id}}', document.getElementById('guess_box').value)">Guess</button>
+					<input autocomplete="off" id="guess_box" type="text" name="guess" class="form-control" maxsize="4" style="width: 200px;
+					display: initial;" placeholder="Enter guess"></input>
+					<button class="btn btn-success small" style="text-transform: uppercase; padding: 2px;" onclick="handle_wordle_action('{{c.id}}', document.getElementById('guess_box').value)">Guess</button>
 					{% elif wordle_status == 'won' %}
 					<strong>Correct!</strong>
 					{% elif wordle_status == 'lost' %}
