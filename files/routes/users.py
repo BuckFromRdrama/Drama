@@ -52,7 +52,7 @@ def grassed(v):
 @app.get("/agendaposters")
 @auth_required
 def agendaposters(v):
-	users = [x for x in g.db.query(User).filter_by(agendaposter = True).order_by(User.username).all()]
+	users = [x for x in g.db.query(User).filter(User.agendaposter > 0).order_by(User.username).all()]
 	return render_template("agendaposters.html", v=v, users=users)
 
 
@@ -888,6 +888,18 @@ def u_username_info(username, v=None):
 
 	return user.json
 
+@app.get("/<id>/info")
+@auth_required
+def u_user_id_info(id, v=None):
+
+	user=get_account(id, v=v)
+
+	if hasattr(user, 'is_blocking') and user.is_blocking:
+		return {"error": "You're blocking this user."}, 401
+	elif hasattr(user, 'is_blocked') and user.is_blocked:
+		return {"error": "This user is blocking you."}, 403
+
+	return user.json
 
 @app.post("/follow/<username>")
 @limiter.limit("1/second;30/minute;200/hour;1000/day")

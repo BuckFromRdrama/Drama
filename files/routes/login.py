@@ -204,6 +204,8 @@ def sign_up_get(v):
 					   digestmod='md5'
 					   ).hexdigest()
 
+	error = request.values.get("error", None)
+
 	redir = request.values.get("redirect", "/").replace("/logged_out", "").strip()
 
 	return render_template("sign_up.html",
@@ -211,7 +213,8 @@ def sign_up_get(v):
 						   now=now,
 						   redirect=redir,
 						   ref_user=ref_user,
-						   hcaptcha=app.config["HCAPTCHA_SITEKEY"]
+						   hcaptcha=app.config["HCAPTCHA_SITEKEY"],
+						   error=error
 						   )
 
 
@@ -330,8 +333,7 @@ def sign_up_post(v):
 		email=email,
 		created_utc=int(time.time()),
 		referred_by=ref_id or None,
-		ban_evade =  int(any((x.is_banned or x.shadowbanned) and not x.unban_utc for x in g.db.query(User).filter(User.id.in_(tuple(session.get("history", [])))).all() if x)),
-		agendaposter = any(x.agendaposter for x in g.db.query(User).filter(User.id.in_(tuple(session.get("history", [])))).all() if x)
+		ban_evade =  int(any((x.is_banned or x.shadowbanned) and not x.unban_utc for x in g.db.query(User).filter(User.id.in_(tuple(session.get("history", [])))).all() if x))
 		)
 
 	g.db.add(new_user)

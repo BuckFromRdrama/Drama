@@ -373,7 +373,7 @@ def reported_posts(v):
 	page = max(1, int(request.values.get("page", 1)))
 
 	listing = g.db.query(Submission).filter_by(
-		is_approved=0,
+		is_approved=None,
 		is_banned=False
 	).join(Submission.reports).order_by(Submission.id.desc()).offset(25 * (page - 1)).limit(26)
 
@@ -395,7 +395,7 @@ def reported_comments(v):
 
 	listing = g.db.query(Comment
 					   ).filter_by(
-		is_approved=0,
+		is_approved=None,
 		is_banned=False
 	).join(Comment.reports).order_by(Comment.id.desc()).offset(25 * (page - 1)).limit(26).all()
 
@@ -526,9 +526,9 @@ def badge_grant_post(v):
 	if url: new_badge.url = url
 
 	g.db.add(new_badge)
-	
+	g.db.flush()
+
 	if v.id != user.id:
-		g.db.flush()
 		text = f"@{v.username} has given you the following profile badge:\n\n![]({new_badge.path})\n\n{new_badge.name}"
 		send_notification(user.id, text)
 	
@@ -568,8 +568,6 @@ def badge_remove_post(v):
 
 	badge = user.has_badge(badge_id)
 	if badge:
-		g.db.delete(badge)
-
 		ma = ModAction(
 			kind="badge_remove",
 			user_id=v.id,
@@ -577,6 +575,8 @@ def badge_remove_post(v):
 			_note=badge.name
 		)
 		g.db.add(ma)
+
+		g.db.delete(badge)
 
 		g.db.commit()
 	
@@ -794,54 +794,71 @@ def admin_removed_comments(v):
 def agendaposter(user_id, v):
 	user = g.db.query(User).filter_by(id=user_id).one_or_none()
 
-	if user.username == '911roofer': abort(403)
-
 	expiry = request.values.get("days", 0)
 	if expiry:
 		expiry = float(expiry)
 		expiry = g.timestamp + expiry*60*60*24
 	else: expiry = g.timestamp + 2629746
 
-	user.agendaposter = not user.agendaposter
-	user.agendaposter_expires_utc = expiry
+	user.agendaposter = expiry
 	g.db.add(user)
+
 	for alt in user.alts:
-		if alt.admin_level: break
-		alt.agendaposter = user.agendaposter
-		alt.agendaposter_expires_utc = expiry
+		if alt.admin_level: return {"error": "User is an admin!"}
+		alt.agendaposter = expiry
 		g.db.add(alt)
 
-	note = None
-
-	if not user.agendaposter: kind = "unagendaposter"
-	else:
-		kind = "agendaposter"
-		note = f"for {request.values.get('days')} days" if expiry else "never expires"
+	note = f"for {request.values.get('days')} days" if expiry else "never expires"
 
 	ma = ModAction(
-		kind=kind,
+		kind="agendaposter",
 		user_id=v.id,
 		target_user_id=user.id,
 		note = note
 	)
 	g.db.add(ma)
 
-	if user.agendaposter:
-		if not user.has_badge(26):
-			badge = Badge(user_id=user.id, badge_id=26)
-			g.db.add(badge)
-			g.db.flush()
-			send_notification(user.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
+	if not user.has_badge(26):
+		badge = Badge(user_id=user.id, badge_id=26)
+		g.db.add(badge)
+		g.db.flush()
+		send_notification(user.id, f"@AutoJanny has given you the following profile badge:\n\n![]({badge.path})\n\n{badge.name}")
 
-	else:
-		badge = user.has_badge(26)
-		if badge: g.db.delete(badge)
 
-	if user.agendaposter: send_repeatable_notification(user.id, f"You have been marked by an admin as an agendaposter ({note}).")
-	else: send_repeatable_notification(user.id, "You have been unmarked by an admin as an agendaposter.")
+	send_repeatable_notification(user.id, f"You have been marked by an admin as an agendaposter ({note}).")
 
 	g.db.commit()
-	if user.agendaposter: return redirect(user.url)
+	
+	return redirect(user.url)
+
+
+
+@app.post("/unagendaposter/<user_id>")
+@admin_level_required(2)
+def unagendaposter(user_id, v):
+	user = g.db.query(User).filter_by(id=user_id).one_or_none()
+
+	user.agendaposter = 0
+	g.db.add(user)
+
+	for alt in user.alts:
+		alt.agendaposter = 0
+		g.db.add(alt)
+
+	ma = ModAction(
+		kind="unagendaposter",
+		user_id=v.id,
+		target_user_id=user.id
+	)
+
+	g.db.add(ma)
+
+	badge = user.has_badge(26)
+	if badge: g.db.delete(badge)
+
+	send_repeatable_notification(user.id, "You have been unmarked by an admin as an agendaposter.")
+
+	g.db.commit()
 	return {"message": "Chud theme disabled!"}
 
 
@@ -1095,7 +1112,7 @@ def ban_post(post_id, v):
 		abort(400)
 
 	post.is_banned = True
-	post.is_approved = 0
+	post.is_approved = None
 	post.stickied = None
 	post.is_pinned = False
 	post.ban_reason = v.username
@@ -1245,21 +1262,23 @@ def unsticky_post(post_id, v):
 def sticky_comment(cid, v):
 	
 	comment = get_comment(cid, v=v)
-	comment.is_pinned = v.username
-	g.db.add(comment)
 
-	ma=ModAction(
-		kind="pin_comment",
-		user_id=v.id,
-		target_comment_id=comment.id
-	)
-	g.db.add(ma)
+	if not comment.is_pinned:
+		comment.is_pinned = v.username
+		g.db.add(comment)
 
-	if v.id != comment.author_id:
-		message = f"@{v.username} has pinned your [comment]({comment.permalink})!"
-		send_repeatable_notification(comment.author_id, message)
+		ma=ModAction(
+			kind="pin_comment",
+			user_id=v.id,
+			target_comment_id=comment.id
+		)
+		g.db.add(ma)
 
-	g.db.commit()
+		if v.id != comment.author_id:
+			message = f"@{v.username} has pinned your [comment]({comment.permalink})!"
+			send_repeatable_notification(comment.author_id, message)
+
+		g.db.commit()
 	return {"message": "Comment pinned!"}
 	
 
@@ -1269,23 +1288,24 @@ def unsticky_comment(cid, v):
 	
 	comment = get_comment(cid, v=v)
 	
-	if comment.is_pinned.endswith("(pin award)"): return {"error": "Can't unpin award pins!"}, 403
+	if comment.is_pinned:
+		if comment.is_pinned.endswith("(pin award)"): return {"error": "Can't unpin award pins!"}, 403
 
-	comment.is_pinned = None
-	g.db.add(comment)
+		comment.is_pinned = None
+		g.db.add(comment)
 
-	ma=ModAction(
-		kind="unpin_comment",
-		user_id=v.id,
-		target_comment_id=comment.id
-	)
-	g.db.add(ma)
+		ma=ModAction(
+			kind="unpin_comment",
+			user_id=v.id,
+			target_comment_id=comment.id
+		)
+		g.db.add(ma)
 
-	if v.id != comment.author_id:
-		message = f"@{v.username} has unpinned your [comment]({comment.permalink})!"
-		send_repeatable_notification(comment.author_id, message)
+		if v.id != comment.author_id:
+			message = f"@{v.username} has unpinned your [comment]({comment.permalink})!"
+			send_repeatable_notification(comment.author_id, message)
 
-	g.db.commit()
+		g.db.commit()
 	return {"message": "Comment unpinned!"}
 
 
@@ -1299,7 +1319,7 @@ def api_ban_comment(c_id, v):
 		abort(404)
 
 	comment.is_banned = True
-	comment.is_approved = 0
+	comment.is_approved = None
 	comment.ban_reason = v.username
 	g.db.add(comment)
 	ma=ModAction(

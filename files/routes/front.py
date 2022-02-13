@@ -201,9 +201,8 @@ def front_all(v, sub=None):
 			g.db.add(v)
 			g.db.commit()
 
-		if v.agendaposter_expires_utc and v.agendaposter_expires_utc < time.time():
-			v.agendaposter_expires_utc = 0
-			v.agendaposter = None
+		if v.agendaposter and v.agendaposter < time.time():
+			v.agendaposter = 0
 			send_repeatable_notification(v.id, "Your chud theme has expired!")
 			g.db.add(v)
 			badge = v.has_badge(26)
@@ -270,7 +269,7 @@ def frontlist(v=None, sort="hot", page=1, t="all", ids_only=True, ccmode="false"
 	
 	if sub: posts = posts.filter_by(sub=sub.name)
 	elif SITE_NAME == '2Much4You': posts = posts.filter(Submission.sub.in_(toomuch_subs))
-	elif SITE_NAME == 'ruqqus': posts = posts.filter(Submission.sub != None)
+	elif SITE_NAME == 'Ruqqus': posts = posts.filter(Submission.sub != None)
 	else: posts = posts.filter_by(sub=None)
 
 	if gt: posts = posts.filter(Submission.created_utc > gt)
@@ -346,7 +345,7 @@ def frontlist(v=None, sort="hot", page=1, t="all", ids_only=True, ccmode="false"
 		pins = g.db.query(Submission).filter(Submission.stickied != None, Submission.is_banned == False)
 		if sub: pins = pins.filter_by(sub=sub.name)
 		elif SITE_NAME == '2Much4You': pins = pins.filter(Submission.sub.in_(toomuch_subs))
-		elif SITE_NAME == 'ruqqus': pins = pins.filter(Submission.sub != None)
+		elif SITE_NAME == 'Ruqqus': pins = pins.filter(Submission.sub != None)
 		else: pins = pins.filter_by(sub=None)
 
 		if v and v.admin_level == 0:

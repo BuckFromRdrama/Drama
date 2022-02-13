@@ -7,7 +7,7 @@
 	<script src="/static/assets/js/bootstrap.js?a=240"></script>
 	{% if v %}
 		<style>:root{--primary:#{{v.themecolor}}}</style>
-		<link rel="stylesheet" href="/static/assets/css/main.css?a=122">
+		<link rel="stylesheet" href="/static/assets/css/main.css?a=123">
 		<link rel="stylesheet" href="/static/assets/css/{{v.theme}}.css?a=21">
 		{% if v.agendaposter %}
 			<style>
@@ -32,7 +32,7 @@
 		{% endif %}
 	{% else %}
 		<style>:root{--primary:#{{config('DEFAULT_COLOR')}}</style>
-		<link rel="stylesheet" href="/static/assets/css/main.css?a=122"><link rel="stylesheet" href="/static/assets/css/{{config('DEFAULT_THEME')}}.css?a=21">
+		<link rel="stylesheet" href="/static/assets/css/main.css?a=123"><link rel="stylesheet" href="/static/assets/css/{{config('DEFAULT_THEME')}}.css?a=21">
 	{% endif %}
 
 	{% if sub and sub.css and not request.path.endswith('settings') %}
@@ -221,7 +221,7 @@
 		{% if v %}
 			
 			{% if sub %}
-				<img alt="/s/{{sub.name}} banner" role="button" data-bs-toggle="modal" data-bs-target="#expandImageModal" onclick="expandDesktopImage('{{sub.banner_url}}')" loading="lazy" src="{{sub.banner_url}}" width=100% style="object-fit:cover;max-height:35vh">
+				<img alt="/s/{{sub.name}} banner" role="button" data-bs-toggle="modal" data-bs-target="#expandImageModal" onclick="expandDesktopImage('{{sub.banner_url}}')" loading="lazy" src="{{sub.banner_url}}" width=100% style="object-fit:cover;max-height:20vw">
 			{% elif SITE_NAME == 'Drama' %}
 				{% set path = "assets/images/" + SITE_NAME + "/banners_bhm" %}
 				{% set image = "/static/" + path + "/" + listdir('files/' + path)|random() + '?a=21' %}
@@ -281,6 +281,13 @@
 		{% if home or sub and p %}
 			{% block sidebar %}
 				{% include "sidebar_" + SITE_NAME + ".html" %}
+				{% if sub and p %}
+					<style>
+						.container {
+							max-width: 1800px;
+						}
+					</style>
+				{% endif %}
 			{% endblock %}
 		{% endif %}
 	</div>
@@ -323,7 +330,7 @@
 <script src="/static/assets/js/lozad.js?a=240"></script>
 
 {% if v %}
-	<script src="/static/assets/js/post_toast2.js?a=240"></script>
+	<script src="/static/assets/js/post_toast2.js?a=242"></script>
 	<script src="/static/assets/js/formatting.js?a=240"></script>
 	<script src="/static/assets/js/default.js?a=240"></script>
 {% endif %}
