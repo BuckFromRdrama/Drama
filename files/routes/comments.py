@@ -211,7 +211,7 @@ def api_comment(v):
 					try:
 						badge_def = loads(body)
 						name = badge_def["name"]
-						badge = g.db.query(BadgeDef).filter_by(name=name).first()
+						badge = g.db.query(BadgeDef).filter_by(name=name).one_or_none()
 						if not badge:
 							badge = BadgeDef(name=name, description=badge_def["description"])
 							g.db.add(badge)
@@ -229,7 +229,7 @@ def api_comment(v):
 						if "author" in marsey: author_id = get_user(marsey["author"]).id
 						elif "author_id" in marsey: author_id = marsey["author_id"]
 						else: abort(400)
-						if not g.db.query(Marsey.name).filter_by(name=name).first():
+						if not g.db.query(Marsey.name).filter_by(name=name).one_or_none():
 							marsey = Marsey(name=marsey["name"], author_id=author_id, tags=marsey["tags"], count=0)
 							g.db.add(marsey)
 						filename = f'files/assets/images/emojis/{name}.webp'
@@ -275,7 +275,7 @@ def api_comment(v):
 		if ban.reason: reason += f" {ban.reason}"
 		return {"error": reason}, 401
 
-	if parent_post.id not in (37696,37697,37749,37833,37838) and not body.startswith('!slots') and not body.startswith('!casino'):
+	if parent_post.id not in (37696,37697,37749,37833,37838) and '!slots' not in body.lower() and '!blackjack' not in body.lower() and '!wordle' not in body.lower() and AGENDAPOSTER_PHRASE not in body.lower():
 		existing = g.db.query(Comment.id).filter(Comment.author_id == v.id,
 																	Comment.deleted_utc == 0,
 																	Comment.parent_comment_id == parent_comment_id,
@@ -289,7 +289,7 @@ def api_comment(v):
 
 	is_bot = bool(request.headers.get("Authorization"))
 
-	if '!slots' not in body.lower() and '!blackjack' not in body.lower() and parent_post.id not in (37696,37697,37749,37833,37838) and not is_bot and not v.marseyawarded and AGENDAPOSTER_PHRASE not in body.lower() and len(body) > 10:
+	if '!slots' not in body.lower() and '!blackjack' not in body.lower() and '!wordle' not in body.lower() and parent_post.id not in (37696,37697,37749,37833,37838) and not is_bot and not v.marseyawarded and AGENDAPOSTER_PHRASE not in body.lower() and len(body) > 10:
 		now = int(time.time())
 		cutoff = now - 60 * 60 * 24
 
@@ -584,7 +584,7 @@ def api_comment(v):
 									'title': f'New reply by @{c.author_name}',
 									'body': notifbody,
 									'deep_link': f'{SITE_FULL}/comment/{c.id}?context=8&read=true#context',
-									'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp?a=1010',
+									'icon': f'{SITE_FULL}/assets/images/{SITE_NAME}/icon.webp?a=1011',
 								}
 							},
 							'fcm': {
@@ -643,11 +643,14 @@ def api_comment(v):
 
 		blackjack = Blackjack(g)
 		blackjack.check_for_blackjack_commands(body, v, c)
+	
+	wordle = Wordle(g)
+	wordle.check_for_wordle_commands(body, v, c)
 
 	treasure = Treasure(g)
 	treasure.check_for_treasure(body, c)
 
-	if not c.slots_result and not c.blackjack_result:
+	if not c.slots_result and not c.blackjack_result and not c.wordle_result:
 		parent_post.comment_count += 1
 		g.db.add(parent_post)
 
@@ -734,7 +737,7 @@ def edit_comment(cid, v):
 			if ban.reason: reason += f" {ban.reason}"	
 		
 			return {'error': reason}, 400
-		if '!slots' not in body.lower() and '!blackjack' not in body.lower() and AGENDAPOSTER_PHRASE not in body.lower():
+		if '!slots' not in body.lower() and '!blackjack' not in body.lower() and '!wordle' not in body.lower() and AGENDAPOSTER_PHRASE not in body.lower():
 			now = int(time.time())
 			cutoff = now - 60 * 60 * 24
 
@@ -1036,6 +1039,21 @@ def handle_blackjack_action(cid, v):
 
 	if action == 'hit': blackjack.player_hit(comment)
 	elif action == 'stay': blackjack.player_stayed(comment)
+	
+	g.db.add(comment)
+	g.db.add(v)
+	g.db.commit()
+	return { "message" : "..." }
+
+@app.post("/wordle/<cid>")
+@limiter.limit("1/second;30/minute;200/hour;1000/day")
+@auth_required
+def handle_wordle_action(cid, v):
+	comment = get_comment(cid)
+	guess = request.values.get("guess", "")
+	wordle = Wordle(g)
+
+	wordle.check_guess(comment,guess)
 	
 	g.db.add(comment)
 	g.db.add(v)

@@ -44,7 +44,7 @@ function post_toast3(t, url, button1, button2) {
 		setTimeout(() => {
 			t.disabled = false;
 			t.classList.remove("disabled");
-		}, 500);
+		}, 2000);
 	};
 
 	xhr.send(form);
@@ -160,7 +160,7 @@ function post_reply(id){
 		setTimeout(() => {
 			btn.disabled = false;
 			btn.classList.remove('disabled');
-		}, 500);
+		}, 2000);
 	}
 	xhr.send(form)
 }
@@ -197,7 +197,7 @@ function comment_edit(id){
 		setTimeout(() => {
 			btn.disabled = false;
 			btn.classList.remove('disabled');
-		}, 500);
+		}, 2000);
 	}
 	xhr.send(form)
 }
@@ -235,7 +235,7 @@ function post_comment(fullname){
 		setTimeout(() => {
 			btn.disabled = false;
 			btn.classList.remove('disabled');
-		}, 500);
+		}, 2000);
 	}
 	xhr.send(form)
 }
@@ -320,6 +320,22 @@ function handle_blackjack_action(cid, action) {
 	
 	const xhr = new XMLHttpRequest();
 	xhr.open("post", `/blackjack/${cid}`);
+	xhr.setRequestHeader('xhr', 'xhr');
+
+	xhr.onload = function() {
+		if (xhr.status == 200) location.reload();
+	}
+	xhr.send(form);
+}
+
+function handle_wordle_action(cid, guess) {
+	const form = new FormData();
+	form.append('formkey', formkey());
+	form.append('comment_id', cid);
+	form.append('guess', guess);
+	
+	const xhr = new XMLHttpRequest();
+	xhr.open("post", `/wordle/${cid}`);
 	xhr.setRequestHeader('xhr', 'xhr');
 
 	xhr.onload = function() {

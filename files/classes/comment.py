@@ -45,6 +45,7 @@ class Comment(Base):
 	ban_reason = Column(String)
 	slots_result = Column(String)
 	blackjack_result = Column(String)
+	wordle_result = Column(String)
 	treasure_amount = Column(String)
 
 	oauth_app = relationship("OauthApp", viewonly=True)
@@ -70,7 +71,7 @@ class Comment(Base):
 	@property
 	@lazy
 	def top_comment(self):
-		return g.db.query(Comment).filter_by(id=self.top_comment_id).first()
+		return g.db.query(Comment).filter_by(id=self.top_comment_id).one_or_none()
 
 	@property
 	@lazy
