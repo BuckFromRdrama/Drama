@@ -169,10 +169,8 @@ def buy(v, award):
 	if award == "lootbox":
 		send_repeatable_notification(995, f"@{v.username} bought a lootbox!")
 		for i in [1,2,3,4,5]:
-			thing = g.db.query(AwardRelationship).order_by(AwardRelationship.id.desc()).first().id
-			thing += 1
 			award = random.choice(["snow", "gingerbread", "lights", "candycane", "fireplace"])
-			award = AwardRelationship(id=thing, user_id=v.id, kind=award)
+			award = AwardRelationship(user_id=v.id, kind=award)
 			g.db.add(award)
 			g.db.flush()
 		v.lootboxes_bought += 1
@@ -193,9 +191,7 @@ def buy(v, award):
 			send_notification(v.id, f"@AutoJanny has given you the following profile badge:\n\n![]({new_badge.path})\n\n{new_badge.name}")
 
 	else:
-		thing = g.db.query(AwardRelationship).order_by(AwardRelationship.id.desc()).first().id
-		thing += 1
-		award = AwardRelationship(id=thing, user_id=v.id, kind=award)
+		award = AwardRelationship(user_id=v.id, kind=award)
 		g.db.add(award)
 
 	g.db.add(v)
@@ -292,15 +288,14 @@ def award_post(pid, v):
 			cache.delete_memoized(frontlist)
 		else: post.stickied_utc = t
 		g.db.add(post)
-	elif kind == "agendaposter" and not (author.agendaposter and author.agendaposter_expires_utc == 0):
+	elif kind == "agendaposter" and not (author.agendaposter and author.agendaposter == 0):
 		if author.marseyawarded:
 			return {"error": "This user is the under the effect of a conflicting award: Marsey award."}, 404
 
 		if author.username == "911roofer": abort(403)
-		if author.agendaposter_expires_utc and time.time() < author.agendaposter_expires_utc: author.agendaposter_expires_utc += 86400
-		else: author.agendaposter_expires_utc = int(time.time()) + 86400
+		if author.agendaposter and time.time() < author.agendaposter: author.agendaposter += 86400
+		else: author.agendaposter = int(time.time()) + 86400
 		
-		author.agendaposter = True
 		if not author.has_badge(26):
 			badge = Badge(user_id=author.id, badge_id=26)
 			g.db.add(badge)
@@ -527,15 +522,14 @@ def award_comment(cid, v):
 			c.is_pinned_utc = None
 		else: c.is_pinned_utc = t
 		g.db.add(c)
-	elif kind == "agendaposter" and not (author.agendaposter and author.agendaposter_expires_utc == 0):
+	elif kind == "agendaposter" and not (author.agendaposter and author.agendaposter == 0):
 		if author.marseyawarded:
 			return {"error": "This user is the under the effect of a conflicting award: Marsey award."}, 404
 
 		if author.username == "911roofer": abort(403)
-		if author.agendaposter_expires_utc and time.time() < author.agendaposter_expires_utc: author.agendaposter_expires_utc += 86400
-		else: author.agendaposter_expires_utc = int(time.time()) + 86400
+		if author.agendaposter and time.time() < author.agendaposter: author.agendaposter += 86400
+		else: author.agendaposter = int(time.time()) + 86400
 		
-		author.agendaposter = True
 		if not author.has_badge(26):
 			badge = Badge(user_id=author.id, badge_id=26)
 			g.db.add(badge)
@@ -694,9 +688,6 @@ def admin_userawards_post(v):
 
 	notify_awards = {}
 
-	latest = g.db.query(AwardRelationship).order_by(AwardRelationship.id.desc()).first()
-	thing = latest.id
-
 	for key, value in request.values.items():
 		if key not in AWARDS: continue
 
@@ -707,10 +698,7 @@ def admin_userawards_post(v):
 			if int(value): notify_awards[key] = int(value)
 
 			for x in range(int(value)):
-				thing += 1
-
 				award = AwardRelationship(
-					id=thing,
 					user_id=u.id,
 					kind=key
 				)

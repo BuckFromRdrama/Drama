@@ -14,6 +14,7 @@ from .badges import *
 from .clients import *
 from .mod_logs import *
 from .mod import *
+from .sub_block import *
 from files.__main__ import Base, cache
 from files.helpers.security import *
 import random
@@ -63,7 +64,7 @@ class User(Base):
 	post_count = Column(Integer, default=0)
 	comment_count = Column(Integer, default=0)
 	received_award_count = Column(Integer, default=0)
-	created_utc = Column(Integer, default=0)
+	created_utc = Column(Integer)
 	suicide_utc = Column(Integer, default=0)
 	rent_utc = Column(Integer, default=0)
 	steal_utc = Column(Integer, default=0)
@@ -72,8 +73,7 @@ class User(Base):
 	admin_level = Column(Integer, default=0)
 	coins_spent = Column(Integer, default=0)
 	lootboxes_bought = Column(Integer, default=0)
-	agendaposter = Column(Boolean, default=False)
-	agendaposter_expires_utc = Column(Integer, default=0)
+	agendaposter = Column(Integer, default=0)
 	changelogsub = Column(Boolean, default=False)
 	is_activated = Column(Boolean, default=False)
 	shadowbanned = Column(String)
@@ -108,7 +108,7 @@ class User(Base):
 	is_banned = Column(Integer, default=0)
 	unban_utc = Column(Integer, default=0)
 	ban_reason = deferred(Column(String))
-	club_allowed = Column(Boolean, default=False)
+	club_allowed = Column(Boolean)
 	login_nonce = Column(Integer, default=0)
 	reserved = deferred(Column(String))
 	coins = Column(Integer, default=0)
@@ -154,6 +154,15 @@ class User(Base):
 	@lazy
 	def mods(self, sub):
 		return self.id == AEVANN_ID or g.db.query(Mod.user_id).filter_by(user_id=self.id, sub=sub).one_or_none()
+
+	@property
+	@lazy
+	def all_blocks(self):
+		return tuple(x[0] for x in g.db.query(SubBlock.sub).filter_by(user_id=self.id).all())
+
+	@lazy
+	def blocks(self, sub):
+		return g.db.query(SubBlock).filter_by(user_id=self.id, sub=sub).one_or_none()
 
 	@lazy
 	def mod_date(self, sub):
@@ -449,7 +458,7 @@ class User(Base):
 	@lazy
 	def banner_url(self):
 		if self.bannerurl: return self.bannerurl
-		else: return f"{SITE_FULL}/static/assets/images/{SITE_NAME}/site_preview.webp?a=1012"
+		else: return f"{SITE_FULL}/static/assets/images/{SITE_NAME}/site_preview.webp?a=1013"
 
 	@property
 	@lazy

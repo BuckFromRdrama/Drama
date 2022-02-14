@@ -79,7 +79,6 @@ SLURS = {
 	"mohammad": "Prophet Mohammad (PBUH)",
 	"muhammad": "Prophet Mohammad (PBUH)",
 	"i hate marsey": "i love marsey",
-	"billie eilish": "Billie Eilish (fat cow)",
 	"dancing israelis": "i love Israel",
 	"sodomite": "total dreamboat",
 	"pajeet": "sexy Indian dude",
@@ -107,8 +106,8 @@ SLURS = {
 
 single_words = "|".join([slur.lower() for slur in SLURS.keys()])
 
-SLUR_REGEX = re.compile(rf"(?i)((?<=\s|>)|^)({single_words})((?=[\s<,.]|s[\s<,.])|$)", re.A)
-SLUR_REGEX_UPPER = re.compile(rf"((?<=\s|>)|^)({single_words.upper()})((?=[\s<,.]|s[\s<,.])|$)", re.A)
+SLUR_REGEX = re.compile(rf"((?<=\s|>)|^)({single_words})((?=[\s<,.$]|s[\s<,.$]))", re.I|re.A)
+SLUR_REGEX_UPPER = re.compile(rf"((?<=\s|>)|^)({single_words.upper()})((?=[\s<,.$]|S[\s<,.$]))", re.A)
 
 def sub_matcher(match):
 	return SLURS[match.group(0).lower()]
@@ -224,7 +223,7 @@ else:
 	CARP_ID = 0
 	JOAN_ID = 0
 	MOOSE_ID = 0
-	AEVANN_ID = 0
+	AEVANN_ID = 10
 	HOMO_ID = 0
 	Q_ID = 0
 	LAWLZ_ID = 0
@@ -381,7 +380,7 @@ AWARDS = {
 	"tilt": {
         "kind": "tilt",
         "title": "Tilt",
-        "description": "Tilts the post by 1 degree (up to 4)",
+        "description": "Tilts the post or comment",
         "icon": "fas fa-car-tilt",
         "color": "text-blue",
         "price": 300

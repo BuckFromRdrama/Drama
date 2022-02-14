@@ -20,14 +20,14 @@ class Comment(Base):
 	id = Column(Integer, primary_key=True)
 	author_id = Column(Integer, ForeignKey("users.id"))
 	parent_submission = Column(Integer, ForeignKey("submissions.id"))
-	created_utc = Column(Integer, default=0)
+	created_utc = Column(Integer)
 	edited_utc = Column(Integer, default=0)
 	is_banned = Column(Boolean, default=False)
 	ghost = Column(Boolean)
 	bannedfor = Column(Boolean)
 	distinguish_level = Column(Integer, default=0)
 	deleted_utc = Column(Integer, default=0)
-	is_approved = Column(Integer, default=0)
+	is_approved = Column(Integer, ForeignKey("users.id"))
 	level = Column(Integer, default=0)
 	parent_comment_id = Column(Integer, ForeignKey("comments.id"))
 	top_comment_id = Column(Integer)
@@ -35,9 +35,8 @@ class Comment(Base):
 	is_bot = Column(Boolean, default=False)
 	is_pinned = Column(String)
 	is_pinned_utc = Column(Integer)
-	sentto=Column(Integer, ForeignKey("users.id"))
+	sentto = Column(Integer, ForeignKey("users.id"))
 	app_id = Column(Integer, ForeignKey("oauth_apps.id"))
-	oauth_app = relationship("OauthApp", viewonly=True)
 	upvotes = Column(Integer, default=1)
 	downvotes = Column(Integer, default=0)
 	realupvotes = Column(Integer, default=1)
@@ -49,6 +48,7 @@ class Comment(Base):
 	wordle_result = Column(String)
 	treasure_amount = Column(String)
 
+	oauth_app = relationship("OauthApp", viewonly=True)
 	post = relationship("Submission", viewonly=True)
 	author = relationship("User", primaryjoin="User.id==Comment.author_id")
 	senttouser = relationship("User", primaryjoin="User.id==Comment.sentto", viewonly=True)
@@ -71,7 +71,7 @@ class Comment(Base):
 	@property
 	@lazy
 	def top_comment(self):
-		return g.db.query(Comment).filter_by(id=self.top_comment_id).first()
+		return g.db.query(Comment).filter_by(id=self.top_comment_id).one_or_none()
 
 	@property
 	@lazy
@@ -362,8 +362,6 @@ class Comment(Base):
 					amount = randint(0, 3)
 					self.upvotes += amount
 					g.db.add(self)
-					self.author.coins += amount
-					g.db.add(self.author)
 					g.db.commit()
 
 		for c in self.options:
@@ -454,6 +452,7 @@ class Notification(Base):
 	user_id = Column(Integer, ForeignKey("users.id"))
 	comment_id = Column(Integer, ForeignKey("comments.id"))
 	read = Column(Boolean, default=False)
+
 	comment = relationship("Comment", viewonly=True)
 	user = relationship("User", viewonly=True)
 

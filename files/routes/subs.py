@@ -4,7 +4,44 @@ from files.helpers.wrappers import *
 from files.classes import *
 from .front import frontlist
 
-valid_sub_regex = re.compile("^[a-zA-Z0-9_\-]{3,25}$")
+valid_sub_regex = re.compile("^[a-zA-Z0-9_\-]{3,20}$")
+
+
+@app.post("/s/<sub>/block")
+@auth_required
+def block_sub(v, sub):
+	sub = g.db.query(Sub).filter_by(name=sub.strip().lower()).one_or_none()
+	if not sub: abort(404)
+	sub = sub.name
+
+	# if v.mods(sub): return {"error": "You can't block subs you mod!"}
+
+	existing = g.db.query(SubBlock).filter_by(user_id=v.id, sub=sub).one_or_none()
+
+	if not existing:
+		block = SubBlock(user_id=v.id, sub=sub)
+		g.db.add(block)
+		g.db.commit()
+		cache.delete_memoized(frontlist)
+
+	return {"message": "Sub blocked successfully!"}
+
+
+@app.post("/s/<sub>/unblock")
+@auth_required
+def unblock_sub(v, sub):
+	sub = g.db.query(Sub).filter_by(name=sub.strip().lower()).one_or_none()
+	if not sub: abort(404)
+	sub = sub.name
+
+	block = g.db.query(SubBlock).filter_by(user_id=v.id, sub=sub).one_or_none()
+
+	if block:
+		g.db.delete(block)
+		g.db.commit()
+		cache.delete_memoized(frontlist)
+
+	return {"message": "Sub unblocked successfully!"}
 
 @app.get("/s/<sub>/mods")
 @is_not_permabanned
@@ -18,6 +55,7 @@ def mods(v, sub):
 
 
 @app.post("/s/<sub>/add_mod")
+@limiter.limit("1/second;5/day")
 @is_not_permabanned
 def add_mod(v, sub):
 	sub = g.db.query(Sub).filter_by(name=sub.strip().lower()).one_or_none()
@@ -61,12 +99,18 @@ def remove_mod(v, sub):
 	try: uid = int(uid)
 	except: abort(400)
 
-	mod = g.db.query(Mod).filter_by(user_id=uid, sub=sub).one_or_none()
+	user = g.db.query(User).filter_by(id=uid).one_or_none()
+
+	if not user: abort(404)
+
+	mod = g.db.query(Mod).filter_by(user_id=user.id, sub=sub).one_or_none()
 	if not mod: abort(400)
+
+	if not (v.id == user.id or v.mod_date(sub.name) and v.mod_date(sub.name) < mod.created_utc): abort(403)
 
 	g.db.delete(mod)
 
-	send_repeatable_notification(uid, f"You have been removed as a mod from /s/{sub}")
+	send_repeatable_notification(user.id, f"You have been removed as a mod from /s/{sub}")
 
 	g.db.commit()
 	
@@ -101,6 +145,7 @@ def create_sub2(v):
 
 		sub = Sub(name=name)
 		g.db.add(sub)
+		g.db.flush()
 		mod = Mod(user_id=v.id, sub=sub.name, created_utc=int(time.time()))
 		g.db.add(mod)
 		g.db.commit()
@@ -184,7 +229,7 @@ def get_sub_css(sub):
 	return resp
 
 @app.post("/s/<sub>/banner")
-@limiter.limit("1/second;30/minute;200/hour;1000/day")
+@limiter.limit("1/second;10/day")
 @is_not_permabanned
 def sub_banner(v, sub):
 	if v and v.patron:
@@ -215,7 +260,7 @@ def sub_banner(v, sub):
 	return redirect(f'/s/{sub.name}/settings')
 
 @app.post("/s/<sub>/sidebar_image")
-@limiter.limit("1/second;30/minute;200/hour;1000/day")
+@limiter.limit("1/second;10/day")
 @is_not_permabanned
 def sub_sidebar(v, sub):
 	if v and v.patron:

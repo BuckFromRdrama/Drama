@@ -35,7 +35,7 @@
 						{% set icon = ('marseyblm','marseykween','marseydynamite','marseyblack','marseymyeisha','marseyetika','marseyobama','marseyblackcop','marseysosa','marseyblackface')|random() %}
 						<img alt="header icon" height=33 src="/static/assets/images/emojis/{{icon}}.webp?a=1008">
 					{% else %}
-						<img alt="header icon" height=33 src="/static/assets/images/{{SITE_NAME}}/headericon.webp?a=1014">
+						<img alt="header icon" height=33 src="/static/assets/images/{{SITE_NAME}}/headericon.webp?a=1015">
 					{% endif %}
 
 					{% if SITE_NAME == 'Drama' %}
@@ -147,7 +147,11 @@
 								<button class="dropdown-item copy-link" data-clipboard-text="{{SITE_FULL}}/signup?ref={{v.username}}"><i class="fad fa-user-friends fa-fw text-left mr-3"></i>Invite friends</button>
 							</div>
 							<div class="px-2">
-								<a class="dropdown-item" href="/assets/{{config('SITE_NAME')}}_v1.7.apk?a=2"><i class="fab fa-android fa-fw text-left mr-3"></i>Android app</a>
+								{% if SITE_NAME == 'Drama' %}
+									<a class="dropdown-item" href="https://play.google.com/store/apps/details?id=com.rdrama"><i class="fab fa-android fa-fw text-left mr-3"></i>Android app</a>
+								{% else %}
+									<a class="dropdown-item" href="/assets/{{config('SITE_NAME')}}_v1.7.apk?a=2"><i class="fab fa-android fa-fw text-left mr-3"></i>Android app</a>
+								{% endif %}
 
 								<a class="dropdown-item" href="/changelog"><i class="fas fa-clipboard fa-fw text-left mr-3"></i>Changelog</a>
 
@@ -160,14 +164,14 @@
 								{% if request.host != 'pcmemes.net' %}
 									<a class="dropdown-item" href="/discord"><i class="fab fa-discord fa-fw text-left mr-3"></i>Discord</a>
 								{% endif %}
-								{% if not (g.webview and v.truecoins < 1) and SITE_NAME not in ('2Much4You','ruqqus') %}
+								{% if not (g.webview and v.truecoins < 1) and SITE_NAME not in ('2Much4You','Ruqqus') %}
 									<a class="dropdown-item" rel="nofollow noopener noreferrer" href="{{config('GUMROAD_LINK')}}"><i class="fas fa-dollar-sign fa-fw text-left mr-3"></i>Donate</a>
 								{% endif %}
 								{% if SITE_NAME == 'Drama' %}<a class="dropdown-item" href="/archives"><i class="fas fa-book fa-fw text-left mr-3"></i>Archives</a>{% endif %}
 								<a class="dropdown-item" href="/contact"><i class="fas fa-file-signature fa-fw text-left mr-3"></i>Contact us</a>
 							</div>
 							<div class="px-2">
-								<a class="dropdown-item" role="button", onclick="post_toast('/logout', '1')"><i class="fas fa-sign-out fa-fw text-left mr-3"></i>Log out</a>
+								<a class="dropdown-item" role="button", onclick="post_toast(this,'/logout', '1')"><i class="fas fa-sign-out fa-fw text-left mr-3"></i>Log out</a>
 							</div>
 						</div>
 					</div>
@@ -208,21 +212,26 @@
 						<a class="nav-link copy-link" data-clipboard-text="{{SITE_FULL}}/signup?ref={{v.username}}"><i class="fas fa-user-friends fa-fw text-left mr-3"></i>Invite friends</a>
 					</li>
 				{% endif %}
-				<a class="nav-item nav-link" href="/assets/{{config('SITE_NAME')}}_v1.7.apk?a=2"><i class="fab fa-android fa-fw mr-3"></i>Android app</a>
+				
+				{% if SITE_NAME == 'Drama' %}
+					<a class="nav-item nav-link" href="https://play.google.com/store/apps/details?id=com.rdrama"><i class="fab fa-android fa-fw mr-3"></i>Android app</a>
+				{% else %}
+					<a class="nav-item nav-link" href="/assets/{{config('SITE_NAME')}}_v1.7.apk?a=2"><i class="fab fa-android fa-fw mr-3"></i>Android app</a>
+				{% endif %}
 
 				<a class="nav-item nav-link" rel="nofollow noopener noreferrer" href="https://github.com/Aevann1/Drama"><i class="fab fa-github fa-fw mr-3"></i>Source code</a>
 
 				{% if request.host != 'pcmemes.net' %}
 					<a class="nav-item nav-link" href="/discord"><i class="fab fa-discord fa-fw mr-3"></i>Discord</a>
 				{% endif %}
-				{% if not (g.webview and v.truecoins < 1) and SITE_NAME not in ('2Much4You','ruqqus') %}
+				{% if not (g.webview and v.truecoins < 1) and SITE_NAME not in ('2Much4You','Ruqqus') %}
 					<a class="nav-item nav-link" rel="nofollow noopener noreferrer" href="{{config('GUMROAD_LINK')}}"><i class="fas fa-dollar-sign fa-fw mr-3"></i>Donate</a>
 				{% endif %}
 				{% if SITE_NAME == 'Drama' %}<a class="nav-item nav-link" href="/archives"><i class="fas fa-book fa-fw mr-3"></i>Archives</a>{% endif %}
 				<a class="nav-item nav-link" href="/contact"><i class="fas fa-file-signature fa-fw mr-3"></i>Contact us</a>
 
 				<li class="nav-item border-top border-bottom mt-2 pt-2">
-					<a class="nav-link" role="button", onclick="post_toast('/logout', '1')"><i class="fas fa-sign-out fa-fw mr-3 text-danger"></i>Log out</a>
+					<a class="nav-link" role="button", onclick="post_toast(this,'/logout', '1')"><i class="fas fa-sign-out fa-fw mr-3 text-danger"></i>Log out</a>
 				</li>
 			{% else %}
 				<li class="nav-item d-flex align-items-center justify-content-center pb-3">
@@ -245,7 +254,7 @@
 	</div>
 </nav>
 
-<script src="/static/assets/js/header.js?a=242"></script>
+<script src="/static/assets/js/header.js?a=245"></script>
 
 <style>
 	.notif-count {

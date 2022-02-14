@@ -18,10 +18,10 @@ from .votes import CommentVote
 class Submission(Base):
 	__tablename__ = "submissions"
 
-	id = Column(BigInteger, primary_key=True)
-	author_id = Column(BigInteger, ForeignKey("users.id"))
-	edited_utc = Column(BigInteger, default=0)
-	created_utc = Column(BigInteger, default=0)
+	id = Column(Integer, primary_key=True)
+	author_id = Column(Integer, ForeignKey("users.id"))
+	edited_utc = Column(Integer, default=0)
+	created_utc = Column(Integer)
 	thumburl = Column(String)
 	is_banned = Column(Boolean, default=False)
 	bannedfor = Column(Boolean)
@@ -31,12 +31,12 @@ class Submission(Base):
 	distinguish_level = Column(Integer, default=0)
 	stickied = Column(String)
 	stickied_utc = Column(Integer)
-	sub = Column(String)
+	sub = Column(String, ForeignKey("subs.name"))
 	is_pinned = Column(Boolean, default=False)
 	private = Column(Boolean, default=False)
 	club = Column(Boolean, default=False)
 	comment_count = Column(Integer, default=0)
-	is_approved = Column(Integer, ForeignKey("users.id"), default=0)
+	is_approved = Column(Integer, ForeignKey("users.id"))
 	over_18 = Column(Boolean, default=False)
 	is_bot = Column(Boolean, default=False)
 	upvotes = Column(Integer, default=1)
@@ -248,13 +248,13 @@ class Submission(Base):
 	@property
 	@lazy
 	def thumb_url(self):
-		if self.over_18: return f"{SITE_FULL}/static/assets/images/nsfw.webp"
-		elif not self.url: return f"{SITE_FULL}/static/assets/images/{SITE_NAME}/default_text.webp"
+		if self.over_18: return f"{SITE_FULL}/static/assets/images/nsfw.webp?a=1"
+		elif not self.url: return f"{SITE_FULL}/static/assets/images/{SITE_NAME}/default_text.webp?a=1"
 		elif self.thumburl: 
 			if self.thumburl.startswith('/'): return SITE_FULL + self.thumburl
 			return self.thumburl
-		elif self.is_youtube or self.is_video: return f"{SITE_FULL}/static/assets/images/default_thumb_yt.webp"
-		else: return f"{SITE_FULL}/static/assets/images/default_thumb_link.webp"
+		elif self.is_youtube or self.is_video: return f"{SITE_FULL}/static/assets/images/default_thumb_yt.webp?a=1"
+		else: return f"{SITE_FULL}/static/assets/images/default_thumb_link.webp?a=1"
 
 	@property
 	@lazy
@@ -380,8 +380,6 @@ class Submission(Base):
 				self.views += amount*random.randint(3, 5)
 				self.upvotes += amount
 				g.db.add(self)
-				self.author.coins += amount
-				g.db.add(self.author)
 				g.db.commit()
 
 		for c in self.options:
@@ -414,7 +412,7 @@ class Submission(Base):
 				body += '''<span class="cost"> (cost of entry: 200 coins)</span>'''
 			body += "</label>"
 			if v and v.admin_level > 2:
-				body += f'''<button class="btn btn-primary px-2 mx-2" style="font-size:10px;padding:2px;margin-top:-5px" onclick="post_toast('/distribute/{c.id}')">Declare winner</button>'''
+				body += f'''<button class="btn btn-primary px-2 mx-2" style="font-size:10px;padding:2px;margin-top:-5px" onclick="post_toast(this,'/distribute/{c.id}')">Declare winner</button>'''
 			body += "</div>"
 
 
