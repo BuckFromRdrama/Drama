@@ -48,9 +48,6 @@ class Wordle:
                     result[pos] = result[pos] + "🟥" # red
                 pos += 1 # add 1 to the letter position
             guesses.append("/".join(result))
-        else:
-            from_comment.wordle_result = format_all(guesses, status, answer)
-            return
 
         
             
